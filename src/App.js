@@ -6,69 +6,121 @@ import {
 } from "recharts";
 import { supabase } from "./supabase";
 
-// ─── ATHLETE PROFILE ─────────────────────────────────────────────────────────
-const ATHLETE = {
-  bodyweight: 255,
-  height: "6'1\"",
-  goalDate: "2026-10-01",
-  targetJump: 36,
-  baseline: { backSquat1RM: 105, rdl: "10 × 115 lbs", lunges: "20 lb DBs", calfRaise: "15 × 125 lbs" },
-};
-
 // ─── PHASES ───────────────────────────────────────────────────────────────────
 const PHASES = [
-  { id: 1, name: "Foundation & Hypertrophy", weeks: 10, startWeek: 1,  endWeek: 10, color: "#4ade80", targetHeight: 0,  description: "Extended to 10 wks for 255 lbs — tendon integrity, landing mechanics, posterior chain base", squatTarget: "Build to ~185 lbs (5×5)", keyFocus: ["Landing mechanics first", "Pogo jumps progressive", "Joints over ego", "Zone 2 cardio only"], deloadWeeks: [4, 8] },
-  { id: 2, name: "Strength & Force Production", weeks: 8, startWeek: 11, endWeek: 18, color: "#facc15", targetHeight: 18, description: "Close the strength gap — 1.5× BW squat is prerequisite for 36\"", squatTarget: "Build to ~225 lbs (3×5)", keyFocus: ["Weekly squat loading targets", "Box jumps intro 12–18\"", "Upper 2×/week", "Swim/bike over running"], deloadWeeks: [14, 18] },
-  { id: 3, name: "Power & Rate of Force Dev",  weeks: 8, startWeek: 19, endWeek: 26, color: "#f97316", targetHeight: 30, description: "Convert strength into explosion — conservative height progression, perfect mechanics", squatTarget: "Maintain 315 lbs+, shift to speed squats", keyFocus: ["Complex training: squat → depth jump", "Jumps before cardio always", "24–30\" box progression", "BW drops = free jump gains"], deloadWeeks: [22, 26] },
-  { id: 4, name: "Peaking & Specificity",      weeks: 4, startWeek: 27, endWeek: 30, color: "#f43f5e", targetHeight: 36, description: "Trimmed to 4 weeks — taper volume, keep intensity, attempt 36\"", squatTarget: "Low volume, high intensity maintenance", keyFocus: ["3–5 max attempts, full rest between", "No new training stimuli", "Sleep & nutrition dialed", "Attempt on week 29 or 30"], deloadWeeks: [] },
+  { id: 1, name: "Foundation & Hypertrophy",    weeks: 10, startWeek: 1,  endWeek: 10, color: "#4ade80", targetHeight: 0,  description: "Extended to 10 wks for 255 lbs — tendon integrity, landing mechanics, posterior chain base", squatTarget: "Build to ~185 lbs (5×5)", deloadWeeks: [4, 8] },
+  { id: 2, name: "Strength & Force Production", weeks: 8,  startWeek: 11, endWeek: 18, color: "#facc15", targetHeight: 18, description: "Close the strength gap — 1.5× BW squat is prerequisite for 36\"", squatTarget: "Build to ~225 lbs (3×5)", deloadWeeks: [14, 18] },
+  { id: 3, name: "Power & Rate of Force Dev",   weeks: 8,  startWeek: 19, endWeek: 26, color: "#f97316", targetHeight: 30, description: "Convert strength into explosion — conservative height progression, perfect mechanics", squatTarget: "Maintain 315 lbs+, shift to speed squats", deloadWeeks: [22, 26] },
+  { id: 4, name: "Peaking & Specificity",        weeks: 4,  startWeek: 27, endWeek: 30, color: "#f43f5e", targetHeight: 36, description: "Trimmed to 4 weeks — taper volume, keep intensity, attempt 36\"", squatTarget: "Low volume, high intensity maintenance", deloadWeeks: [] },
 ];
 const TOTAL_WEEKS = 30;
+
+// ─── WEEKLY PLAN TEMPLATES PER PHASE ─────────────────────────────────────────
+const PHASE_PLANS = {
+  1: {
+    weeklyNote: "Focus on form over load. Step down from any box — never jump down.",
+    deloadMods: "Cut all sets by 40%. Keep weight the same. Focus on perfect form. No new PRs.",
+    days: {
+      Mon: { label: "Heavy Lower Body",       sessionType: "Lower Strength (Deadlifts, Split Squats)", detail: "Back squat 4×8, RDL 3×10, Bulgarian split squat 3×10/leg, calf raise 4×15", isRest: false },
+      Tue: { label: "Core & Pillar",          sessionType: "Core & Stability",                         detail: "Plank 3×60s, dead bug 3×12, glute bridge 3×15, Copenhagen plank 3×20s", isRest: false },
+      Wed: { label: "Active Recovery",        sessionType: "Recovery / Mobility",                      detail: "Hip flexor stretching, ankle dorsiflexion drills, foam roll quads & calves, 20 min walk", isRest: false },
+      Thu: { label: "Explosive Foundation",   sessionType: "Lower Power (Jumps + Squats)",             detail: "Kettlebell swing 5×10, goblet squat 4×10, box step-up 3×10/leg, med ball slam 3×8", isRest: false },
+      Fri: { label: "Upper Body & Trunk",     sessionType: "Upper Push",                               detail: "Push-up 4×12, pull-up 4×max, overhead press 3×10, med ball slam 3×8, farmer carry 3×30m", isRest: false },
+      Sat: { label: "Low-Level Plyometrics",  sessionType: "Plyometrics",                              detail: "Jump rope 3×2min, pogo jumps 4×20, broad jump 3×5 (land soft), ankle hops 3×15", isRest: false },
+      Sun: { label: "Rest",                   sessionType: null,                                        detail: "Full rest. Sleep 8+ hrs.", isRest: true },
+    },
+  },
+  2: {
+    weeklyNote: "Squat numbers are the #1 metric this phase. Log every working set.",
+    deloadMods: "Drop to 60% 1RM on squats. 3 sets max. No dynamic effort work.",
+    days: {
+      Mon: { label: "Max Strength Lower",     sessionType: "Lower Strength (Deadlifts, Split Squats)", detail: "Back squat 5×3 @85%+, Romanian DL 4×5, leg press 3×8. Log exact weights.", isRest: false },
+      Tue: { label: "Plyometric Intro",       sessionType: "Plyometrics",                              detail: "Box jump 5×3 @12–18\" (full reset between reps), depth drop 3×5 @12\", broad jump 3×4", isRest: false },
+      Wed: { label: "Rest",                   sessionType: null,                                        detail: "Full rest or light walk. CNS recovery.", isRest: true },
+      Thu: { label: "Speed Work",             sessionType: "Lower Power (Jumps + Squats)",             detail: "Dynamic effort squat 8×2 @50% 1RM (fast as possible), KB swing 4×8, box step-up 3×8/leg", isRest: false },
+      Fri: { label: "Accessory & Core",       sessionType: "Core & Stability",                         detail: "Bulgarian split squat 4×8/leg, weighted plank 3×45s, Nordic curl 3×6, hip thrust 4×10", isRest: false },
+      Sat: { label: "Broad Jumps + Upper",    sessionType: "Upper Pull",                               detail: "Broad jump 5×4 (max distance), pull-up 4×max, row 4×10, face pull 3×15", isRest: false },
+      Sun: { label: "Rest",                   sessionType: null,                                        detail: "Full rest.", isRest: true },
+    },
+  },
+  3: {
+    weeklyNote: "Jump quality over quantity. 3–5 max-effort jumps beats 15 sloppy ones. Full rest between reps.",
+    deloadMods: "Cut jump volume in half. No new height PRs. Focus on landing quality.",
+    days: {
+      Mon: { label: "Complex Training",       sessionType: "Complex Training (Squat → Depth Jump)",   detail: "Heavy squat 4×3 @80%, immediately: depth jump from 18\" 4×3. Rest 3 min between complexes.", isRest: false },
+      Tue: { label: "Upper Body",             sessionType: "Upper Push",                               detail: "Bench press 4×6, overhead press 3×8, dips 3×10, lateral raise 3×15. Optional: easy swim 20 min.", isRest: false },
+      Wed: { label: "Rest",                   sessionType: null,                                        detail: "Full rest. CNS needs 48h after Monday complex.", isRest: true },
+      Thu: { label: "Vertical Focus",         sessionType: "Lower Power (Jumps + Squats)",             detail: "Weighted jump squat 5×3 @20–30% BW, standing broad jump 4×4, tuck jump 3×5", isRest: false },
+      Fri: { label: "Depth Drops + Upper",    sessionType: "Upper Pull",                               detail: "Depth drop from 24\" 4×5 (stick every landing), pull-up 4×max, cable row 4×10, face pull 3×15", isRest: false },
+      Sat: { label: "High Box Jumps",         sessionType: "Plyometrics",                              detail: "Box jump 6×3 @24–30\" (max effort, full reset, step down). Log highest clean jump.", isRest: false },
+      Sun: { label: "Rest",                   sessionType: null,                                        detail: "Full rest.", isRest: true },
+    },
+  },
+  4: {
+    weeklyNote: "Volume drops, intensity stays. Your body is loaded — trust the process and taper.",
+    deloadMods: "N/A — this is the peak phase.",
+    days: {
+      Mon: { label: "Max Effort Jumps",       sessionType: "Plyometrics",                              detail: "3–5 attempts at goal height (36\"). Full 5-min rest between. Stop if form degrades.", isRest: false },
+      Tue: { label: "CNS Maintenance",        sessionType: "Lower Strength (Deadlifts, Split Squats)", detail: "Squat 3×2 @85% (low volume, high intensity). Pull-up 3×5 weighted. Done.", isRest: false },
+      Wed: { label: "Full Rest",              sessionType: null,                                        detail: "No training. Walk, stretch, sleep.", isRest: true },
+      Thu: { label: "Reactive Power",         sessionType: "Lower Power (Jumps + Squats)",             detail: "Tuck jump 3×4, hurdle hop 3×5, depth jump 3×3 @18\". Low volume, explosive intent.", isRest: false },
+      Fri: { label: "Mobility & Visualization", sessionType: "Recovery / Mobility",                   detail: "Hip, ankle, thoracic mobility. 10 min visualization of the 36\" attempt. No fatigue.", isRest: false },
+      Sat: { label: "Trial Simulation",       sessionType: "Plyometrics",                              detail: "Sub-maximal jumps @30–33\". 4 attempts. Save CNS for the real attempt.", isRest: false },
+      Sun: { label: "Rest",                   sessionType: null,                                        detail: "Full rest.", isRest: true },
+    },
+  },
+};
+
+const DAYS_ORDER = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
 const SESSION_TYPES = [
   "Lower Power (Jumps + Squats)",
   "Lower Strength (Deadlifts, Split Squats)",
-  "Upper Push",
-  "Upper Pull",
-  "Cardio",
-  "Plyometrics",
-  "Core & Stability",
-  "Complex Training (Squat → Depth Jump)",
-  "Recovery / Mobility",
+  "Upper Push","Upper Pull","Cardio","Plyometrics","Core & Stability",
+  "Complex Training (Squat → Depth Jump)","Recovery / Mobility",
 ];
-const CARDIO_TYPES = ["Swimming", "Biking", "Running", "Other"];
+const CARDIO_TYPES = ["Swimming","Biking","Running","Other"];
 
-const JUMP_MILESTONES  = [{ height: 12, label: "First jump", emoji: "🌱" }, { height: 18, label: "Phase 2 target", emoji: "⚡" }, { height: 24, label: "2-foot barrier", emoji: "🔥" }, { height: 30, label: "Phase 3 target", emoji: "💥" }, { height: 33, label: "3 inches out", emoji: "🎯" }, { height: 36, label: "GOAL", emoji: "🏆" }];
-const SQUAT_MILESTONES = [{ weight: 135, label: "Plate on each side", emoji: "🔩" }, { weight: 185, label: "Phase 1 target", emoji: "💪" }, { weight: 225, label: "Phase 2 target", emoji: "⚡" }, { weight: 275, label: "~1.1× BW", emoji: "🔥" }, { weight: 315, label: "Three plates", emoji: "💥" }, { weight: 380, label: "1.5× BW — jump ready", emoji: "🏆" }];
+const JUMP_MILESTONES  = [{ height: 12, label: "First jump", emoji: "🌱" },{ height: 18, label: "Phase 2 target", emoji: "⚡" },{ height: 24, label: "2-foot barrier", emoji: "🔥" },{ height: 30, label: "Phase 3 target", emoji: "💥" },{ height: 33, label: "3 inches out", emoji: "🎯" },{ height: 36, label: "GOAL", emoji: "🏆" }];
+const SQUAT_MILESTONES = [{ weight: 135, label: "Plate on each side", emoji: "🔩" },{ weight: 185, label: "Phase 1 target", emoji: "💪" },{ weight: 225, label: "Phase 2 target", emoji: "⚡" },{ weight: 275, label: "~1.1× BW", emoji: "🔥" },{ weight: 315, label: "Three plates", emoji: "💥" },{ weight: 380, label: "1.5× BW — jump ready", emoji: "🏆" }];
 
-const phaseFor = (week) => PHASES.find(p => week >= p.startWeek && week <= p.endWeek) || PHASES[0];
+const phaseFor  = (week) => PHASES.find(p => week >= p.startWeek && week <= p.endWeek) || PHASES[0];
+const todayStr  = () => new Date().toISOString().split("T")[0];
+const todayDOW  = () => { const d = new Date(); return DAYS_ORDER[(d.getDay() + 6) % 7]; };
+const isDeload  = (week, phase) => phase?.deloadWeeks?.includes(week);
+
+const dateForDOW = (dow) => {
+  const today = new Date();
+  const todayIdx = (today.getDay() + 6) % 7; // 0=Mon
+  const targetIdx = DAYS_ORDER.indexOf(dow);
+  const diff = targetIdx - todayIdx;
+  const d = new Date(today);
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().split("T")[0];
+};
 
 const BLANK_FORM = {
-  date: new Date().toISOString().split("T")[0],
-  type: SESSION_TYPES[0], week: "1", phase: "1",
+  date: todayStr(), type: SESSION_TYPES[0], week: "1", phase: "1",
   boxHeight: "", squatWeight: "", sets: "", reps: "",
   load: "", notes: "", cardioType: "", cardioMinutes: "", bodyweight: "255",
 };
 
 export default function App() {
-  const [sessions, setSessions]     = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [saving, setSaving]         = useState(false);
-  const [error, setError]           = useState(null);
-  const [tab, setTab]               = useState("dashboard");
-  const [showForm, setShowForm]     = useState(false);
-  const [showFeedback, setShowFeedback] = useState(false);
-  const [feedbackText, setFeedbackText] = useState("");
-  const [copied, setCopied]         = useState(false);
-  const [form, setForm]             = useState(BLANK_FORM);
+  const [sessions, setSessions]             = useState([]);
+  const [loading, setLoading]               = useState(true);
+  const [saving, setSaving]                 = useState(false);
+  const [error, setError]                   = useState(null);
+  const [tab, setTab]                       = useState("dashboard");
+  const [showForm, setShowForm]             = useState(false);
+  const [showFeedback, setShowFeedback]     = useState(false);
+  const [feedbackText, setFeedbackText]     = useState("");
+  const [copied, setCopied]                 = useState(false);
+  const [form, setForm]                     = useState(BLANK_FORM);
 
-  // ── Load sessions from Supabase ──
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("sessions")
-        .select("*")
-        .order("date", { ascending: true });
+      const { data, error } = await supabase.from("sessions").select("*").order("date", { ascending: true });
       if (error) setError(error.message);
       else setSessions(data || []);
       setLoading(false);
@@ -80,60 +132,62 @@ export default function App() {
   const currentWeek        = sessions.length ? Math.max(...sessions.map(s => s.week), 1) : 1;
   const currentPhase       = phaseFor(currentWeek);
   const maxJump            = Math.max(...sessions.map(s => s.box_height || 0), 0);
-  const maxSquat           = Math.max(...sessions.map(s => s.squat_weight || 0), ATHLETE.baseline.backSquat1RM);
-  const latestBW           = sessions.filter(s => s.bodyweight).slice(-1)[0]?.bodyweight || ATHLETE.bodyweight;
-  const bwDrop             = ATHLETE.bodyweight - latestBW;
-  const nextJumpMilestone  = JUMP_MILESTONES.find(m => m.height > maxJump)  || JUMP_MILESTONES.at(-1);
+  const maxSquat           = Math.max(...sessions.map(s => s.squat_weight || 0), 105);
+  const latestBW           = sessions.filter(s => s.bodyweight).slice(-1)[0]?.bodyweight || 255;
+  const bwDrop             = 255 - latestBW;
+  const nextJumpMilestone  = JUMP_MILESTONES.find(m => m.height > maxJump) || JUMP_MILESTONES.at(-1);
   const nextSquatMilestone = SQUAT_MILESTONES.find(m => m.weight > maxSquat) || SQUAT_MILESTONES.at(-1);
   const jumpProgress       = Math.round((maxJump / 36) * 100);
   const squatProgress      = Math.round(Math.min((maxSquat / 380) * 100, 100));
   const weeksLeft          = Math.max(0, TOTAL_WEEKS - currentWeek);
+  const todayPlan          = PHASE_PLANS[currentPhase.id]?.days[todayDOW()];
+  const todayLogged        = sessions.some(s => s.date === todayStr());
+  const deloadThisWeek     = isDeload(currentWeek, currentPhase);
 
-  // ── Chart data ──
   const heightData = sessions.filter(s => s.box_height).map(s => ({ week: `W${s.week}`, height: s.box_height }));
   const squatData  = sessions.filter(s => s.squat_weight).map(s => ({ week: `W${s.week}`, squat: s.squat_weight }));
   const bwData     = sessions.filter(s => s.bodyweight).map(s => ({ week: `W${s.week}`, bw: s.bodyweight }));
-
-  const radarData = [
-    { axis: "Lower Power",  value: Math.min(sessions.filter(s => s.type.includes("Lower Power") || s.type.includes("Complex")).length * 12, 100) },
-    { axis: "Strength",     value: Math.min(sessions.filter(s => s.type.includes("Lower Strength")).length * 10, 100) },
-    { axis: "Plyos",        value: Math.min(sessions.filter(s => s.type === "Plyometrics").length * 14, 100) },
-    { axis: "Upper",        value: Math.min(sessions.filter(s => s.type.includes("Upper")).length * 10, 100) },
-    { axis: "Cardio",       value: Math.min(sessions.filter(s => s.type === "Cardio").length * 10, 100) },
-    { axis: "Recovery",     value: Math.min(sessions.filter(s => s.type.includes("Core") || s.type.includes("Recovery")).length * 12, 100) },
+  const radarData  = [
+    { axis: "Lower Power", value: Math.min(sessions.filter(s => s.type.includes("Lower Power") || s.type.includes("Complex")).length * 12, 100) },
+    { axis: "Strength",    value: Math.min(sessions.filter(s => s.type.includes("Lower Strength")).length * 10, 100) },
+    { axis: "Plyos",       value: Math.min(sessions.filter(s => s.type === "Plyometrics").length * 14, 100) },
+    { axis: "Upper",       value: Math.min(sessions.filter(s => s.type.includes("Upper")).length * 10, 100) },
+    { axis: "Cardio",      value: Math.min(sessions.filter(s => s.type === "Cardio").length * 10, 100) },
+    { axis: "Recovery",    value: Math.min(sessions.filter(s => s.type.includes("Core") || s.type.includes("Recovery")).length * 12, 100) },
   ];
 
-  // ── Save session ──
+  // ── Open form helpers ──
+  const openForm = useCallback((prefill = {}) => {
+    setForm({ ...BLANK_FORM, week: String(currentWeek), phase: String(currentPhase.id), ...prefill });
+    setShowForm(true);
+  }, [currentWeek, currentPhase]);
+
+  const openFormFromPlan = useCallback((dow) => {
+    const plan = PHASE_PLANS[currentPhase.id]?.days[dow];
+    if (!plan || plan.isRest) return;
+    openForm({ date: dateForDOW(dow), type: plan.sessionType || SESSION_TYPES[0], notes: plan.detail });
+  }, [currentPhase, openForm]);
+
+  // ── Save & delete ──
   const addSession = async () => {
-    setSaving(true);
-    setError(null);
-    const payload = {
-      date:            form.date,
-      week:            parseInt(form.week),
-      phase:           parseInt(form.phase),
-      type:            form.type,
-      box_height:      form.boxHeight      ? parseInt(form.boxHeight)      : null,
-      squat_weight:    form.squatWeight    ? parseInt(form.squatWeight)    : null,
-      sets:            form.sets           ? parseInt(form.sets)           : null,
-      reps:            form.reps           ? parseInt(form.reps)           : null,
-      load:            form.load           || null,
-      notes:           form.notes          || null,
-      cardio_type:     form.cardioType     || null,
-      cardio_minutes:  form.cardioMinutes  ? parseInt(form.cardioMinutes)  : null,
-      bodyweight:      form.bodyweight     ? parseInt(form.bodyweight)     : null,
-    };
-    const { data, error } = await supabase.from("sessions").insert([payload]).select();
-    if (error) {
-      setError(error.message);
-    } else {
-      setSessions(prev => [...prev, ...data].sort((a, b) => new Date(a.date) - new Date(b.date)));
-      setShowForm(false);
-      setForm({ ...BLANK_FORM, week: String(currentWeek), phase: String(currentPhase.id) });
-    }
+    setSaving(true); setError(null);
+    const { data, error } = await supabase.from("sessions").insert([{
+      date: form.date, week: parseInt(form.week), phase: parseInt(form.phase), type: form.type,
+      box_height:     form.boxHeight     ? parseInt(form.boxHeight)     : null,
+      squat_weight:   form.squatWeight   ? parseInt(form.squatWeight)   : null,
+      sets:           form.sets          ? parseInt(form.sets)          : null,
+      reps:           form.reps          ? parseInt(form.reps)          : null,
+      load:           form.load          || null,
+      notes:          form.notes         || null,
+      cardio_type:    form.cardioType    || null,
+      cardio_minutes: form.cardioMinutes ? parseInt(form.cardioMinutes) : null,
+      bodyweight:     form.bodyweight    ? parseInt(form.bodyweight)    : null,
+    }]).select();
+    if (error) setError(error.message);
+    else { setSessions(prev => [...prev, ...data].sort((a, b) => new Date(a.date) - new Date(b.date))); setShowForm(false); }
     setSaving(false);
   };
 
-  // ── Delete session ──
   const deleteSession = async (id) => {
     const { error } = await supabase.from("sessions").delete().eq("id", id);
     if (!error) setSessions(prev => prev.filter(s => s.id !== id));
@@ -142,205 +196,246 @@ export default function App() {
   // ── AI Feedback ──
   const generateFeedback = useCallback(() => {
     const recent = sessions.slice(-12);
-    const txt = `PROJECT 36-INCH COUNTER — TRAINING LOG
-Generated: ${new Date().toLocaleDateString()}
+    const txt = `PROJECT 36-INCH COUNTER — TRAINING LOG\nGenerated: ${new Date().toLocaleDateString()}\n\nATHLETE: 255 lbs start / 6'1" / Goal: 36" by Oct 1, 2026\nCurrent BW: ${latestBW} lbs (dropped: ${bwDrop} lbs)\nWeek: ${currentWeek}/${TOTAL_WEEKS} | Phase ${currentPhase.id}: ${currentPhase.name}\nBest jump: ${maxJump > 0 ? maxJump + '"' : "not yet"} | Best squat: ${maxSquat} lbs (goal: 380)\n\nRECENT SESSIONS:\n${recent.map(s => `- ${s.date} Wk${s.week} | ${s.type}${s.box_height ? ` | Jump: ${s.box_height}"` : ""}${s.squat_weight ? ` | Squat: ${s.squat_weight}lbs` : ""}${s.load ? ` | ${s.load}` : ""}${s.notes ? ` | "${s.notes}"` : ""}`).join("\n")}\n\nTOTALS: Lower: ${sessions.filter(s=>s.type.includes("Lower")).length} | Upper: ${sessions.filter(s=>s.type.includes("Upper")).length} | Plyos: ${sessions.filter(s=>s.type==="Plyometrics").length} | Cardio: ${sessions.filter(s=>s.type==="Cardio").length}\n\nRespond with: (1) On track for 36" by Oct 1? (2) Squat pace to 380 lbs? (3) Red flags? (4) Top 3 priorities next 2–3 weeks (5) BW trend assessment`;
+    setFeedbackText(txt); setShowFeedback(true);
+  }, [sessions, currentWeek, currentPhase, maxJump, maxSquat, latestBW, bwDrop]);
 
-ATHLETE PROFILE:
-- Bodyweight: ${latestBW} lbs (started: 255 lbs, dropped: ${bwDrop} lbs)
-- Height: 6'1"
-- Goal: 36" box jump by October 1, 2026
+  // ── Styles ──
+  const card = { background: "#111118", border: "1px solid #1d1d2e", borderRadius: 14, padding: "20px 22px" };
+  const lbl  = { fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: "#9999bb", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 6 };
+  const dim  = { fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#9999bb" };
+  const body = { fontFamily: "'DM Sans',sans-serif", fontSize: 13, color: "#ccccdd" };
 
-CURRENT STATUS:
-- Training week: ${currentWeek} of ${TOTAL_WEEKS} (${weeksLeft} weeks remaining)
-- Phase: ${currentPhase.id} — ${currentPhase.name}
-- Best box jump: ${maxJump > 0 ? maxJump + '"' : "not yet attempted"}
-- Best squat logged: ${maxSquat} lbs (goal: 380 lbs = 1.5× BW)
-- Jump progress: ${jumpProgress}% to goal
-- Squat progress: ${squatProgress}% to 380 lb target
+  // ── Weekly plan grid (reused in Dashboard and Plan tab) ──
+  const WeeklyGrid = ({ compact }) => {
+    const plan = PHASE_PLANS[currentPhase.id];
+    const today = todayDOW();
+    return (
+      <div style={{ display: "grid", gridTemplateColumns: compact ? "repeat(7,1fr)" : "repeat(auto-fill,minmax(132px,1fr))", gap: compact ? 5 : 10 }}>
+        {DAYS_ORDER.map(dow => {
+          const d        = plan.days[dow];
+          const isToday  = dow === today;
+          const date     = dateForDOW(dow);
+          const logged   = sessions.some(s => s.date === date);
+          const isPast   = new Date(date + "T23:59:59") < new Date() && !isToday;
+          const canLog   = !d.isRest && !logged;
 
-BASELINE (March 10, 2026):
-- Back squat est. 1RM: ~105 lbs
-- RDL: 10 × 115 lbs | Lunges: 20 lb DBs | Calf raise: 15 × 125 lbs
-
-PHASE SQUAT TARGETS:
-- End Phase 1 (Wk 10): 185 lbs
-- End Phase 2 (Wk 18): 225 lbs
-- End Phase 3 (Wk 26): 315 lbs
-- Goal day: 380 lbs
-
-RECENT SESSIONS (last 12):
-${recent.map(s =>
-  `- ${s.date} | Wk${s.week} Ph${s.phase} | ${s.type}` +
-  (s.box_height    ? ` | Jump: ${s.box_height}"` : "") +
-  (s.squat_weight  ? ` | Squat: ${s.squat_weight} lbs` : "") +
-  (s.load          ? ` | ${s.load}` : "") +
-  (s.cardio_type   ? ` | ${s.cardio_type} ${s.cardio_minutes}min` : "") +
-  (s.notes         ? ` | "${s.notes}"` : "")
-).join("\n")}
-
-SESSION VOLUME TOTALS:
-- Lower power/complex: ${sessions.filter(s => s.type.includes("Lower Power") || s.type.includes("Complex")).length}
-- Lower strength: ${sessions.filter(s => s.type.includes("Lower Strength")).length}
-- Upper body: ${sessions.filter(s => s.type.includes("Upper")).length}
-- Cardio: ${sessions.filter(s => s.type === "Cardio").length}
-- Plyometrics: ${sessions.filter(s => s.type === "Plyometrics").length}
-- Recovery/core: ${sessions.filter(s => s.type.includes("Core") || s.type.includes("Recovery")).length}
-
-Please analyze and respond with:
-1. Am I on track to hit 36" by Oct 1, 2026 given my 255 lb starting weight?
-2. Is my squat progression on pace for the 380 lb target?
-3. Any training imbalances or red flags?
-4. Top 3 priorities for the next 2–3 weeks
-5. Body composition notes — does the BW trend look right?`;
-    setFeedbackText(txt);
-    setShowFeedback(true);
-  }, [sessions, currentWeek, currentPhase, maxJump, maxSquat, latestBW, bwDrop, weeksLeft, jumpProgress, squatProgress]);
-
-  const copyFeedback = () => {
-    navigator.clipboard.writeText(feedbackText);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+          return (
+            <div key={dow} style={{
+              background: isToday ? "#14142a" : "#0d0d16",
+              border: `1px solid ${isToday ? currentPhase.color + "77" : d.isRest ? "#161620" : "#1d1d2e"}`,
+              borderRadius: 10, padding: compact ? "7px 8px" : "13px 14px",
+              opacity: d.isRest ? 0.45 : 1,
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: compact ? 3 : 7 }}>
+                <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: compact ? 12 : 13, fontWeight: 700, letterSpacing: 1, color: isToday ? currentPhase.color : "#aaaacc" }}>
+                  {dow}{isToday && !compact && <span style={{ ...dim, fontSize: 8, marginLeft: 4, color: currentPhase.color, letterSpacing: 1 }}>TODAY</span>}
+                </span>
+                {!d.isRest && (
+                  <div style={{ width: 9, height: 9, borderRadius: "50%", flexShrink: 0, background: logged ? "#4ade80" : isPast ? "#f43f5e33" : "#1a1a2e", border: `1.5px solid ${logged ? "#4ade80" : isPast ? "#f43f5e" : "#2a2a3e"}` }} />
+                )}
+              </div>
+              <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: compact ? 9 : 11, fontWeight: 600, color: d.isRest ? "#333" : "#ccccdd", lineHeight: 1.3, marginBottom: compact ? 0 : 5 }}>
+                {d.label}
+              </div>
+              {!compact && !d.isRest && <div style={{ ...dim, fontSize: 10, lineHeight: 1.5, marginBottom: 9 }}>{d.detail}</div>}
+              {!compact && canLog && (
+                <button onClick={() => openFormFromPlan(dow)} style={{
+                  fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, letterSpacing: 1, fontSize: 11,
+                  background: isToday ? currentPhase.color : "transparent",
+                  color: isToday ? "#0b0b12" : currentPhase.color,
+                  border: `1px solid ${currentPhase.color}44`, borderRadius: 6,
+                  padding: "5px 10px", cursor: "pointer", width: "100%",
+                }}>
+                  {isToday ? "▶ LOG TODAY" : "+ LOG"}
+                </button>
+              )}
+              {!compact && logged && <div style={{ ...dim, fontSize: 11, color: "#4ade80" }}>✓ Logged</div>}
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
-  // ── Shared style helpers ──
-  const card  = { background: "#111118", border: "1px solid #1d1d2e", borderRadius: 14, padding: "20px 22px" };
-  const lbl   = { fontFamily: "'DM Sans', sans-serif", fontSize: 10, color: "#9999bb", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 6 };
-
   if (loading) return (
-    <div style={{ background: "#0b0b12", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Barlow Condensed', sans-serif", color: "#4ade80", fontSize: 28, letterSpacing: 3 }}>
+    <div style={{ background: "#0b0b12", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Barlow Condensed',sans-serif", color: "#4ade80", fontSize: 28, letterSpacing: 3 }}>
       <style>{"@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700&display=swap');"}</style>
       LOADING YOUR LOG...
     </div>
   );
 
   return (
-    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", background: "#0b0b12", minHeight: "100vh", color: "#e8e8f0" }}>
+    <div style={{ fontFamily: "'Barlow Condensed',sans-serif", background: "#0b0b12", minHeight: "100vh", color: "#e8e8f0" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        ::-webkit-scrollbar { width: 3px; } ::-webkit-scrollbar-track { background: #0b0b12; } ::-webkit-scrollbar-thumb { background: #2a2a40; border-radius: 2px; }
-        .tab { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 10px 18px; background: none; border: none; color: #7777a0; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.18s; white-space: nowrap; }
-        .tab.on { color: #4ade80; border-bottom-color: #4ade80; }
-        .tab:hover:not(.on) { color: #aaaacc; }
-        .inp { font-family: 'DM Sans', sans-serif; background: #16161f; border: 1px solid #22223a; border-radius: 8px; color: #e8e8f0; padding: 10px 13px; width: 100%; font-size: 13px; outline: none; transition: border-color 0.2s; }
-        .inp:focus { border-color: #4ade80; }
-        .inp option { background: #16161f; }
-        .btn-g { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; letter-spacing: 2px; font-size: 15px; background: #4ade80; color: #0b0b12; border: none; border-radius: 8px; padding: 11px 24px; cursor: pointer; transition: all 0.15s; }
-        .btn-g:hover { background: #22c55e; transform: translateY(-1px); }
-        .btn-g:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-        .btn-o { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; letter-spacing: 2px; font-size: 13px; background: none; color: #4ade80; border: 1px solid #2a3d2a; border-radius: 8px; padding: 9px 18px; cursor: pointer; transition: all 0.15s; }
-        .btn-o:hover { border-color: #4ade80; background: rgba(74,222,128,0.06); }
-        .btn-r { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; letter-spacing: 2px; font-size: 13px; background: none; color: #f43f5e; border: 1px solid #3d1a22; border-radius: 8px; padding: 9px 18px; cursor: pointer; }
-        .pbar { height: 5px; background: #1a1a28; border-radius: 3px; overflow: hidden; }
-        .pfill { height: 100%; border-radius: 3px; transition: width 0.7s cubic-bezier(.4,0,.2,1); }
-        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .modal { background: #111118; border: 1px solid #1d1d2e; border-radius: 18px; padding: 28px; width: 100%; max-width: 580px; max-height: 92vh; overflow-y: auto; }
-        .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 600; }
-        .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .g3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
-        .srow { background: #111118; border: 1px solid #1a1a28; border-radius: 10px; padding: 13px 16px; margin-bottom: 8px; }
-        .del-btn { background: none; border: none; color: #33334a; cursor: pointer; font-size: 14px; padding: 4px 8px; border-radius: 4px; transition: color 0.15s; }
-        .del-btn:hover { color: #f43f5e; }
-        .err { background: rgba(244,63,94,0.08); border: 1px solid rgba(244,63,94,0.25); border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #f43f5e; }
+        @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:#0b0b12}::-webkit-scrollbar-thumb{background:#2a2a40;border-radius:2px}
+        .tab{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:10px 18px;background:none;border:none;color:#7777a0;cursor:pointer;border-bottom:2px solid transparent;transition:all .18s;white-space:nowrap}
+        .tab.on{color:#4ade80;border-bottom-color:#4ade80}.tab:hover:not(.on){color:#aaaacc}
+        .inp{font-family:'DM Sans',sans-serif;background:#16161f;border:1px solid #22223a;border-radius:8px;color:#e8e8f0;padding:10px 13px;width:100%;font-size:13px;outline:none;transition:border-color .2s}
+        .inp:focus{border-color:#4ade80}.inp option{background:#16161f}
+        .btn-g{font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:2px;font-size:15px;background:#4ade80;color:#0b0b12;border:none;border-radius:8px;padding:11px 24px;cursor:pointer;transition:all .15s}
+        .btn-g:hover{background:#22c55e;transform:translateY(-1px)}.btn-g:disabled{opacity:.5;cursor:not-allowed;transform:none}
+        .btn-o{font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:2px;font-size:13px;background:none;color:#4ade80;border:1px solid #2a3d2a;border-radius:8px;padding:9px 18px;cursor:pointer;transition:all .15s}
+        .btn-o:hover{border-color:#4ade80;background:rgba(74,222,128,.06)}
+        .btn-r{font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:2px;font-size:13px;background:none;color:#f43f5e;border:1px solid #3d1a22;border-radius:8px;padding:9px 18px;cursor:pointer}
+        .pbar{height:5px;background:#1a1a28;border-radius:3px;overflow:hidden}
+        .pfill{height:100%;border-radius:3px;transition:width .7s cubic-bezier(.4,0,.2,1)}
+        .overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+        .modal{background:#111118;border:1px solid #1d1d2e;border-radius:18px;padding:28px;width:100%;max-width:580px;max-height:92vh;overflow-y:auto}
+        .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600}
+        .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+        .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+        .srow{background:#111118;border:1px solid #1a1a28;border-radius:10px;padding:13px 16px;margin-bottom:8px}
+        .del-btn{background:none;border:none;color:#44445a;cursor:pointer;font-size:14px;padding:4px 8px;border-radius:4px;transition:color .15s}
+        .del-btn:hover{color:#f43f5e}
+        .err{background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.25);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-family:'DM Sans',sans-serif;font-size:13px;color:#f43f5e}
       `}</style>
 
-      {/* ── HEADER ── */}
+      {/* HEADER */}
       <div style={{ background: "linear-gradient(160deg,#0e0e18,#12121e)", borderBottom: "1px solid #16162a", padding: "22px 24px 0" }}>
         <div style={{ maxWidth: 980, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16, paddingBottom: 20 }}>
             <div>
-              <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: "#4ade80", letterSpacing: 3, marginBottom: 5 }}>PROJECT</div>
+              <div style={{ ...dim, fontSize: 10, color: "#4ade80", letterSpacing: 3, marginBottom: 5 }}>PROJECT</div>
               <div style={{ fontSize: 48, fontWeight: 800, lineHeight: 1, letterSpacing: 1 }}>36-INCH <span style={{ color: "#4ade80" }}>COUNTER</span></div>
-              <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#aaaacc", marginTop: 6 }}>255 lbs · 6'1" · Vertical Explosion Protocol · Goal: Oct 1, 2026</div>
+              <div style={{ ...dim, color: "#aaaacc", marginTop: 6 }}>255 lbs · 6'1" · Vertical Explosion Protocol · Goal: Oct 1, 2026</div>
             </div>
             <div style={{ display: "flex", alignItems: "stretch" }}>
               {[
-                { val: maxJump > 0 ? `${maxJump}"` : "—", sub: "BEST JUMP",      color: "#4ade80" },
-                { val: `${maxSquat}`,                      sub: "BEST SQUAT",     color: "#facc15", unit: "lbs" },
-                { val: `${latestBW}`,                      sub: "BODYWEIGHT",     color: bwDrop > 0 ? "#4ade80" : "#f97316", unit: "lbs" },
-                { val: `W${currentWeek}`,                  sub: `PHASE ${currentPhase.id}`, color: currentPhase.color },
+                { val: maxJump > 0 ? `${maxJump}"` : "—", sub: "BEST JUMP",   color: "#4ade80" },
+                { val: `${maxSquat}`,                       sub: "BEST SQUAT", color: "#facc15", unit: "lbs" },
+                { val: `${latestBW}`,                       sub: "BODYWEIGHT", color: bwDrop > 0 ? "#4ade80" : "#f97316", unit: "lbs" },
+                { val: `W${currentWeek}`,                   sub: `PHASE ${currentPhase.id}`, color: currentPhase.color },
               ].map((s, i) => (
                 <div key={i} style={{ padding: "10px 20px", borderLeft: i > 0 ? "1px solid #16162a" : "none", textAlign: "center", minWidth: 80 }}>
                   <div style={{ fontSize: 34, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.val}</div>
-                  {s.unit && <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: s.color, opacity: 0.6 }}>{s.unit}</div>}
-                  <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 9, color: "#9999bb", letterSpacing: 1.5, marginTop: 3 }}>{s.sub}</div>
+                  {s.unit && <div style={{ ...dim, fontSize: 10, color: s.color, opacity: 0.7 }}>{s.unit}</div>}
+                  <div style={{ ...dim, fontSize: 9, color: "#9999bb", letterSpacing: 1.5, marginTop: 3 }}>{s.sub}</div>
                 </div>
               ))}
             </div>
           </div>
-
-          {/* dual progress bars */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, paddingBottom: 18 }}>
             {[
-              { label: `Jump progress → 36"`, pct: jumpProgress, color: "linear-gradient(90deg,#4ade80,#22d3ee)", textColor: "#4ade80" },
-              { label: "Squat progress → 380 lbs (1.5× BW)", pct: squatProgress, color: "linear-gradient(90deg,#facc15,#f97316)", textColor: "#facc15" },
+              { label: `Jump progress → 36"`,                 pct: jumpProgress,  grad: "linear-gradient(90deg,#4ade80,#22d3ee)", tc: "#4ade80" },
+              { label: "Squat progress → 380 lbs (1.5× BW)", pct: squatProgress, grad: "linear-gradient(90deg,#facc15,#f97316)", tc: "#facc15" },
             ].map(b => (
               <div key={b.label}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                  <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#ccccdd" }}>{b.label}</span>
-                  <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: b.textColor }}>{b.pct}%</span>
+                  <span style={{ ...dim, color: "#aaaacc" }}>{b.label}</span>
+                  <span style={{ ...dim, color: b.tc }}>{b.pct}%</span>
                 </div>
-                <div className="pbar"><div className="pfill" style={{ width: `${b.pct}%`, background: b.color }} /></div>
+                <div className="pbar"><div className="pfill" style={{ width: `${b.pct}%`, background: b.grad }} /></div>
               </div>
             ))}
           </div>
-
-          {/* tabs */}
           <div style={{ display: "flex", overflowX: "auto", borderTop: "1px solid #16162a" }}>
-            {["dashboard","log","progress","phases","milestones"].map(t => (
+            {["dashboard","plan","log","progress","phases","milestones"].map(t => (
               <button key={t} className={`tab ${tab === t ? "on" : ""}`} onClick={() => setTab(t)}>{t}</button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* ── CONTENT ── */}
       <div style={{ maxWidth: 980, margin: "0 auto", padding: "26px 24px" }}>
         {error && <div className="err">⚠ {error}</div>}
 
-        {/* DASHBOARD */}
+        {/* ── DASHBOARD ── */}
         {tab === "dashboard" && (
           <div style={{ display: "grid", gap: 18 }}>
+
+            {/* TODAY CARD */}
+            <div style={{ ...card, borderColor: todayLogged ? "#4ade8044" : todayPlan?.isRest ? "#1d1d2e" : currentPhase.color + "66", background: todayLogged ? "linear-gradient(135deg,#0d1a10,#0f1815)" : "#111118" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
+                    <div style={{ ...dim, fontSize: 10, color: currentPhase.color, letterSpacing: 2 }}>
+                      TODAY — {new Date().toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"}).toUpperCase()}
+                    </div>
+                    {deloadThisWeek && <span style={{ ...dim, fontSize: 10, color: "#f97316", background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.3)", borderRadius: 6, padding: "2px 8px" }}>DELOAD WEEK</span>}
+                  </div>
+                  {todayPlan ? (
+                    <>
+                      <div style={{ fontSize: 28, fontWeight: 800, color: todayPlan.isRest ? "#444" : "#e8e8f0" }}>
+                        {todayPlan.isRest ? "Rest Day" : todayPlan.label}
+                      </div>
+                      {!todayPlan.isRest && (
+                        <div style={{ ...body, marginTop: 8, color: "#aaaacc", lineHeight: 1.7 }}>
+                          {deloadThisWeek ? PHASE_PLANS[currentPhase.id].deloadMods : todayPlan.detail}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 24, fontWeight: 800, color: "#444" }}>No plan for today</div>
+                  )}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
+                  {todayLogged
+                    ? <div style={{ ...body, color: "#4ade80", fontWeight: 700, fontSize: 14 }}>✓ LOGGED</div>
+                    : todayPlan && !todayPlan.isRest
+                      ? <button className="btn-g" style={{ fontSize: 13 }} onClick={() => openFormFromPlan(todayDOW())}>▶ Log Today</button>
+                      : null}
+                  <button className="btn-o" style={{ fontSize: 12 }} onClick={() => setTab("plan")}>View Full Week →</button>
+                </div>
+              </div>
+            </div>
+
+            {/* COMPACT WEEK STRIP */}
+            <div style={card}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <div style={lbl}>This Week</div>
+                <div style={{ display: "flex", gap: 14 }}>
+                  {[{ c: "#4ade80", l: "Logged" },{ c: "#f43f5e", l: "Missed" },{ c: "#1a1a2e", l: "Upcoming", border: "#2a2a3e" }].map(i => (
+                    <div key={i.l} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: i.c, border: i.border ? `1.5px solid ${i.border}` : "none" }} />
+                      <span style={{ ...dim, fontSize: 10 }}>{i.l}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <WeeklyGrid compact={true} />
+            </div>
+
             {bwDrop > 0 && (
-              <div style={{ background: "rgba(74,222,128,0.06)", border: "1px solid rgba(74,222,128,0.18)", borderRadius: 10, padding: "12px 16px", fontFamily: "'DM Sans',sans-serif", fontSize: 13, color: "#4ade80" }}>
+              <div style={{ background: "rgba(74,222,128,0.06)", border: "1px solid rgba(74,222,128,0.18)", borderRadius: 10, padding: "12px 16px", ...body, color: "#4ade80" }}>
                 ↓ {bwDrop} lb bodyweight drop logged — every pound less is a free jump gain 🎯
               </div>
             )}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 16 }}>
-              {/* phase */}
+
+            {/* STAT CARDS */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 16 }}>
               <div style={{ ...card, borderColor: currentPhase.color + "44" }}>
                 <div style={lbl}>Active Phase</div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: currentPhase.color }}>{currentPhase.name}</div>
-                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#9999bb", marginTop: 5 }}>{currentPhase.description}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: currentPhase.color }}>{currentPhase.name}</div>
+                <div style={{ ...dim, marginTop: 5, lineHeight: 1.6 }}>{currentPhase.description}</div>
                 <div style={{ marginTop: 12 }}>
                   <div className="pbar"><div className="pfill" style={{ width: `${Math.min(Math.round(((currentWeek - currentPhase.startWeek) / currentPhase.weeks) * 100), 100)}%`, background: currentPhase.color }} /></div>
-                  <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: "#9999bb", marginTop: 4 }}>Wk {currentWeek - currentPhase.startWeek + 1} of {currentPhase.weeks} · {currentPhase.squatTarget}</div>
+                  <div style={{ ...dim, fontSize: 10, marginTop: 4 }}>Wk {currentWeek - currentPhase.startWeek + 1} of {currentPhase.weeks} · {currentPhase.squatTarget}</div>
                 </div>
               </div>
-              {/* jump milestone */}
               <div style={card}>
                 <div style={lbl}>Next Jump Milestone</div>
-                <div style={{ fontSize: 42, fontWeight: 800 }}>{nextJumpMilestone.emoji} {nextJumpMilestone.height}"</div>
-                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#9999bb" }}>{nextJumpMilestone.label} · {nextJumpMilestone.height - maxJump}" to go</div>
+                <div style={{ fontSize: 38, fontWeight: 800 }}>{nextJumpMilestone.emoji} {nextJumpMilestone.height}"</div>
+                <div style={{ ...dim, marginTop: 4 }}>{nextJumpMilestone.label} · {nextJumpMilestone.height - maxJump}" to go</div>
                 <div style={{ marginTop: 10 }}><div className="pbar"><div className="pfill" style={{ width: `${Math.round((maxJump / nextJumpMilestone.height) * 100)}%`, background: "#4ade80" }} /></div></div>
               </div>
-              {/* squat milestone */}
               <div style={card}>
                 <div style={lbl}>Next Squat Milestone</div>
-                <div style={{ fontSize: 42, fontWeight: 800, color: "#facc15" }}>{nextSquatMilestone.emoji} {nextSquatMilestone.weight}</div>
-                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#9999bb" }}>{nextSquatMilestone.label} · {nextSquatMilestone.weight - maxSquat} lbs to go</div>
+                <div style={{ fontSize: 38, fontWeight: 800, color: "#facc15" }}>{nextSquatMilestone.emoji} {nextSquatMilestone.weight}</div>
+                <div style={{ ...dim, marginTop: 4 }}>{nextSquatMilestone.label} · {nextSquatMilestone.weight - maxSquat} lbs to go</div>
                 <div style={{ marginTop: 10 }}><div className="pbar"><div className="pfill" style={{ width: `${Math.round((maxSquat / nextSquatMilestone.weight) * 100)}%`, background: "#facc15" }} /></div></div>
               </div>
-              {/* weeks */}
               <div style={card}>
                 <div style={lbl}>Timeline</div>
-                <div style={{ fontSize: 42, fontWeight: 800, color: "#f97316" }}>{weeksLeft}</div>
-                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#9999bb" }}>weeks remaining of {TOTAL_WEEKS}</div>
+                <div style={{ fontSize: 38, fontWeight: 800, color: "#f97316" }}>{weeksLeft}</div>
+                <div style={{ ...dim, marginTop: 4 }}>weeks remaining of {TOTAL_WEEKS}</div>
                 <div style={{ marginTop: 10 }}><div className="pbar"><div className="pfill" style={{ width: `${Math.round((currentWeek / TOTAL_WEEKS) * 100)}%`, background: "#f97316" }} /></div></div>
               </div>
             </div>
 
-            {/* charts */}
+            {/* CHARTS */}
             <div className="g2">
               <div style={card}>
                 <div style={lbl}>Training Balance</div>
@@ -366,19 +461,19 @@ Please analyze and respond with:
                     </LineChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 13, color: "#9999bb", height: 190, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "0 20px" }}>
+                  <div style={{ ...dim, height: 190, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "0 20px" }}>
                     Log a session with a box height to see your jump curve
                   </div>
                 )}
               </div>
             </div>
 
-            {/* AI feedback */}
+            {/* AI FEEDBACK */}
             <div style={{ ...card, background: "linear-gradient(135deg,#0d1a10,#0f1815)", borderColor: "#1a3020" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 14 }}>
                 <div>
                   <div style={{ fontSize: 22, fontWeight: 700, color: "#4ade80" }}>AI FEEDBACK ENGINE</div>
-                  <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#66aa88", marginTop: 4 }}>Generate a full training snapshot → paste into a new Claude chat for analysis & adjustments</div>
+                  <div style={{ ...dim, color: "#88ccaa", marginTop: 4 }}>Generate a full training snapshot → paste into a new Claude chat for analysis & adjustments</div>
                 </div>
                 <button className="btn-g" onClick={generateFeedback}>Generate Summary</button>
               </div>
@@ -386,14 +481,75 @@ Please analyze and respond with:
           </div>
         )}
 
-        {/* LOG */}
+        {/* ── PLAN TAB ── */}
+        {tab === "plan" && (
+          <div style={{ display: "grid", gap: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: 1 }}>WEEKLY PLAN</div>
+                <div style={{ ...dim, color: "#aaaacc", marginTop: 4 }}>Phase {currentPhase.id} · Week {currentWeek} · {PHASE_PLANS[currentPhase.id].weeklyNote}</div>
+              </div>
+              <button className="btn-g" onClick={() => openForm()}>+ Log Custom Session</button>
+            </div>
+
+            {deloadThisWeek && (
+              <div style={{ background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.25)", borderRadius: 10, padding: "12px 16px", ...body, color: "#f97316" }}>
+                ⚡ <strong>DELOAD WEEK {currentWeek}</strong> — {PHASE_PLANS[currentPhase.id].deloadMods}
+              </div>
+            )}
+
+            <div style={card}>
+              <WeeklyGrid compact={false} />
+            </div>
+
+            {/* All phase plans reference */}
+            <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: 1, marginTop: 4 }}>ALL PHASE PLANS</div>
+            {PHASES.map(ph => {
+              const plan = PHASE_PLANS[ph.id];
+              const isActive = currentPhase.id === ph.id;
+              return (
+                <div key={ph.id} style={{ ...card, borderColor: isActive ? ph.color + "55" : "#1d1d2e", marginBottom: 0, opacity: currentWeek > ph.endWeek ? 0.5 : 1 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ fontSize: 22, fontWeight: 800, color: ph.color }}>PHASE {ph.id}</div>
+                        {isActive && <span className="badge" style={{ background: ph.color + "22", color: ph.color }}>ACTIVE</span>}
+                      </div>
+                      <div style={{ ...body, marginTop: 2 }}>{ph.name} · Weeks {ph.startWeek}–{ph.endWeek}</div>
+                      <div style={{ ...dim, marginTop: 2, fontStyle: "italic" }}>{plan.weeklyNote}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(128px,1fr))", gap: 8 }}>
+                    {DAYS_ORDER.map(dow => {
+                      const d = plan.days[dow];
+                      return (
+                        <div key={dow} style={{ background: "#0d0d16", borderRadius: 8, padding: "10px 12px", border: `1px solid ${d.isRest ? "#161620" : "#1d1d2e"}`, opacity: d.isRest ? 0.4 : 1 }}>
+                          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 13, fontWeight: 700, color: "#aaaacc", letterSpacing: 1, marginBottom: 4 }}>{dow}</div>
+                          <div style={{ ...dim, fontSize: 11, fontWeight: 600, color: d.isRest ? "#444" : "#ccccdd", lineHeight: 1.3, marginBottom: 4 }}>{d.label}</div>
+                          {!d.isRest && <div style={{ ...dim, fontSize: 10, lineHeight: 1.5 }}>{d.detail}</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {ph.deloadWeeks.length > 0 && (
+                    <div style={{ ...dim, fontSize: 11, marginTop: 12, color: "#f97316" }}>
+                      ⚡ Deload weeks: {ph.deloadWeeks.join(", ")} — {plan.deloadMods}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── LOG TAB ── */}
         {tab === "log" && (
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: 1 }}>SESSION LOG</div>
-              <button className="btn-g" onClick={() => setShowForm(true)}>+ Log Session</button>
+              <button className="btn-g" onClick={() => openForm()}>+ Log Session</button>
             </div>
-            {sessions.length === 0 && <div style={{ fontFamily: "'DM Sans',sans-serif", color: "#9999bb", textAlign: "center", padding: "60px 0" }}>No sessions yet — hit "+ Log Session" to start</div>}
+            {sessions.length === 0 && <div style={{ ...dim, textAlign: "center", padding: "60px 0" }}>No sessions yet — use the Plan tab to log your first session</div>}
             {[...sessions].reverse().map(s => {
               const ph = PHASES[s.phase - 1];
               return (
@@ -401,20 +557,20 @@ Please analyze and respond with:
                   <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 17, fontWeight: 700 }}>{s.type}</div>
-                      <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 13, color: "#b0b0cc", marginTop: 3, lineHeight: 1.7 }}>
+                      <div style={{ ...body, color: "#aaaacc", marginTop: 3, lineHeight: 1.7 }}>
                         {s.date} · Wk {s.week}
                         {s.box_height   ? <span style={{ color: "#4ade80" }}> · 📦 {s.box_height}"</span> : ""}
                         {s.squat_weight ? <span style={{ color: "#facc15" }}> · 🏋️ {s.squat_weight} lbs</span> : ""}
-                        {s.sets         ? ` · ${s.sets}×${s.reps}` : ""}
-                        {s.load         ? ` · ${s.load}` : ""}
+                        {s.sets ? ` · ${s.sets}×${s.reps}` : ""}
+                        {s.load ? ` · ${s.load}` : ""}
                         {s.cardio_type  ? <span style={{ color: "#f97316" }}> · {s.cardio_type} {s.cardio_minutes}min</span> : ""}
                         {s.bodyweight   ? <span style={{ color: "#a78bfa" }}> · BW: {s.bodyweight} lbs</span> : ""}
                       </div>
-                      {s.notes && <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#9999bb", marginTop: 4, fontStyle: "italic" }}>"{s.notes}"</div>}
+                      {s.notes && <div style={{ ...dim, marginTop: 4, fontStyle: "italic", lineHeight: 1.5 }}>"{s.notes}"</div>}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span className="badge" style={{ background: ph?.color + "22", color: ph?.color }}>P{s.phase}</span>
-                      <button className="del-btn" onClick={() => deleteSession(s.id)} title="Delete session">✕</button>
+                      <button className="del-btn" onClick={() => deleteSession(s.id)}>✕</button>
                     </div>
                   </div>
                 </div>
@@ -423,7 +579,7 @@ Please analyze and respond with:
           </div>
         )}
 
-        {/* PROGRESS */}
+        {/* ── PROGRESS TAB ── */}
         {tab === "progress" && (
           <div style={{ display: "grid", gap: 18 }}>
             <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: 1 }}>PROGRESS CHARTS</div>
@@ -441,11 +597,11 @@ Please analyze and respond with:
                     <Line type="monotone" dataKey="height" stroke="#4ade80" strokeWidth={3} dot={{ fill: "#4ade80", r: 5 }} activeDot={{ r: 7, fill: "#22d3ee" }} />
                   </LineChart>
                 </ResponsiveContainer>
-              ) : <div style={{ fontFamily: "'DM Sans',sans-serif", color: "#9999bb", padding: "60px 0", textAlign: "center" }}>No jump data yet</div>}
+              ) : <div style={{ ...dim, padding: "60px 0", textAlign: "center" }}>No jump data yet</div>}
             </div>
             <div className="g2">
               <div style={card}>
-                <div style={lbl}>Squat → 380 lbs (1.5× BW)</div>
+                <div style={lbl}>Squat → 380 lbs</div>
                 {squatData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={200}>
                     <LineChart data={squatData}>
@@ -454,11 +610,10 @@ Please analyze and respond with:
                       <YAxis domain={[0, 420]} tick={{ fill: "#9999bb", fontSize: 10 }} unit=" lbs" />
                       <Tooltip contentStyle={{ background: "#111118", border: "1px solid #facc15", fontFamily: "DM Sans" }} formatter={v => [`${v} lbs`, "Squat"]} />
                       <ReferenceLine y={380} stroke="#f43f5e" strokeDasharray="4 4" label={{ value: "380 target", fill: "#f43f5e", fontSize: 10 }} />
-                      <ReferenceLine y={225} stroke="#facc1566" strokeDasharray="3 3" />
                       <Line type="monotone" dataKey="squat" stroke="#facc15" strokeWidth={2.5} dot={{ fill: "#facc15", r: 4 }} />
                     </LineChart>
                   </ResponsiveContainer>
-                ) : <div style={{ fontFamily: "'DM Sans',sans-serif", color: "#9999bb", padding: "40px 0", textAlign: "center", fontSize: 13 }}>Log squat weight to track</div>}
+                ) : <div style={{ ...dim, padding: "40px 0", textAlign: "center" }}>Log squat weight to track</div>}
               </div>
               <div style={card}>
                 <div style={lbl}>Bodyweight Over Time</div>
@@ -473,26 +628,26 @@ Please analyze and respond with:
                       <Line type="monotone" dataKey="bw" stroke="#a78bfa" strokeWidth={2.5} dot={{ fill: "#a78bfa", r: 4 }} />
                     </LineChart>
                   </ResponsiveContainer>
-                ) : <div style={{ fontFamily: "'DM Sans',sans-serif", color: "#9999bb", padding: "40px 0", textAlign: "center", fontSize: 13 }}>Log bodyweight each session to track</div>}
+                ) : <div style={{ ...dim, padding: "40px 0", textAlign: "center" }}>Log bodyweight each session to track</div>}
               </div>
             </div>
             <div style={card}>
               <div style={lbl}>Session Volume Breakdown</div>
               <div className="g3" style={{ marginTop: 12 }}>
                 {[
-                  { label: "Lower Power / Complex", count: sessions.filter(s => s.type.includes("Lower Power") || s.type.includes("Complex")).length, color: "#4ade80" },
-                  { label: "Lower Strength",         count: sessions.filter(s => s.type.includes("Lower Strength")).length, color: "#4ade80" },
-                  { label: "Upper Push",             count: sessions.filter(s => s.type === "Upper Push").length, color: "#22d3ee" },
-                  { label: "Upper Pull",             count: sessions.filter(s => s.type === "Upper Pull").length, color: "#22d3ee" },
-                  { label: "Cardio",                 count: sessions.filter(s => s.type === "Cardio").length, color: "#f97316" },
-                  { label: "Plyometrics",            count: sessions.filter(s => s.type === "Plyometrics").length, color: "#facc15" },
-                  { label: "Core & Stability",       count: sessions.filter(s => s.type.includes("Core")).length, color: "#a78bfa" },
-                  { label: "Recovery / Mobility",    count: sessions.filter(s => s.type.includes("Recovery")).length, color: "#a78bfa" },
+                  { label: "Lower Power / Complex", count: sessions.filter(s=>s.type.includes("Lower Power")||s.type.includes("Complex")).length, color: "#4ade80" },
+                  { label: "Lower Strength",         count: sessions.filter(s=>s.type.includes("Lower Strength")).length, color: "#4ade80" },
+                  { label: "Upper Push",             count: sessions.filter(s=>s.type==="Upper Push").length, color: "#22d3ee" },
+                  { label: "Upper Pull",             count: sessions.filter(s=>s.type==="Upper Pull").length, color: "#22d3ee" },
+                  { label: "Cardio",                 count: sessions.filter(s=>s.type==="Cardio").length, color: "#f97316" },
+                  { label: "Plyometrics",            count: sessions.filter(s=>s.type==="Plyometrics").length, color: "#facc15" },
+                  { label: "Core & Stability",       count: sessions.filter(s=>s.type.includes("Core")).length, color: "#a78bfa" },
+                  { label: "Recovery / Mobility",    count: sessions.filter(s=>s.type.includes("Recovery")).length, color: "#a78bfa" },
                   { label: "Total Sessions",         count: sessions.length, color: "#f43f5e" },
                 ].map(item => (
                   <div key={item.label} style={{ background: "#0d0d15", borderRadius: 10, padding: "14px 16px" }}>
                     <div style={{ fontSize: 36, fontWeight: 800, color: item.color }}>{item.count}</div>
-                    <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#9999bb", marginTop: 2 }}>{item.label}</div>
+                    <div style={{ ...dim, fontSize: 11, marginTop: 2 }}>{item.label}</div>
                   </div>
                 ))}
               </div>
@@ -500,11 +655,11 @@ Please analyze and respond with:
           </div>
         )}
 
-        {/* PHASES */}
+        {/* ── PHASES TAB ── */}
         {tab === "phases" && (
           <div>
             <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: 1, marginBottom: 8 }}>TRAINING PHASES</div>
-            <div style={{ background: "rgba(251,146,60,0.08)", border: "1px solid rgba(251,146,60,0.2)", borderRadius: 10, padding: "12px 16px", marginBottom: 16, fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#fb923c" }}>
+            <div style={{ background: "rgba(251,146,60,0.08)", border: "1px solid rgba(251,146,60,0.2)", borderRadius: 10, padding: "12px 16px", marginBottom: 16, ...dim, color: "#fb923c" }}>
               <strong>255 lbs adjustment:</strong> Phase 1 extended to 10 weeks · Phase 4 trimmed to 4 weeks · Deloads every 4th week · Squat to 380 lbs (1.5× BW) is the central prerequisite
             </div>
             {PHASES.map(phase => {
@@ -520,24 +675,19 @@ Please analyze and respond with:
                         {isComplete && <span className="badge" style={{ background: "#ffffff0a", color: "#9999bb" }}>DONE</span>}
                         {phase.deloadWeeks.length > 0 && <span className="badge" style={{ background: "#f9731622", color: "#f97316" }}>Deloads: Wk {phase.deloadWeeks.join(", ")}</span>}
                       </div>
-                      <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 14, color: "#c0c0d0", marginTop: 3 }}>{phase.name}</div>
-                      <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#9999bb", marginTop: 4 }}>{phase.description}</div>
+                      <div style={{ ...body, marginTop: 3 }}>{phase.name}</div>
+                      <div style={{ ...dim, marginTop: 4 }}>{phase.description}</div>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#9999bb" }}>Weeks {phase.startWeek}–{phase.endWeek} · {phase.weeks} wks</div>
+                      <div style={{ ...dim }}>Weeks {phase.startWeek}–{phase.endWeek} · {phase.weeks} wks</div>
                       {phase.targetHeight > 0 && <div style={{ fontSize: 22, fontWeight: 800, color: phase.color, marginTop: 4 }}>Jump target: {phase.targetHeight}"</div>}
-                      <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#9999bb", marginTop: 2 }}>{phase.squatTarget}</div>
+                      <div style={{ ...dim, marginTop: 2 }}>{phase.squatTarget}</div>
                     </div>
-                  </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: isActive ? 12 : 0 }}>
-                    {phase.keyFocus.map(f => (
-                      <span key={f} style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, background: "#16161f", border: "1px solid #22223a", borderRadius: 6, padding: "3px 9px", color: "#ccccdd" }}>{f}</span>
-                    ))}
                   </div>
                   {isActive && (
                     <div>
                       <div className="pbar"><div className="pfill" style={{ width: `${Math.min(Math.round(((currentWeek - phase.startWeek) / phase.weeks) * 100), 100)}%`, background: phase.color }} /></div>
-                      <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: "#9999bb", marginTop: 4 }}>Week {currentWeek - phase.startWeek + 1} of {phase.weeks}</div>
+                      <div style={{ ...dim, fontSize: 10, marginTop: 4 }}>Week {currentWeek - phase.startWeek + 1} of {phase.weeks}</div>
                     </div>
                   )}
                 </div>
@@ -546,13 +696,13 @@ Please analyze and respond with:
           </div>
         )}
 
-        {/* MILESTONES */}
+        {/* ── MILESTONES TAB ── */}
         {tab === "milestones" && (
           <div>
             <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: 1, marginBottom: 20 }}>MILESTONES</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
               <div>
-                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#9999bb", letterSpacing: 2, marginBottom: 14 }}>JUMP HEIGHT</div>
+                <div style={{ ...dim, letterSpacing: 2, marginBottom: 14 }}>JUMP HEIGHT</div>
                 {JUMP_MILESTONES.map(m => {
                   const done = maxJump >= m.height;
                   return (
@@ -560,17 +710,16 @@ Please analyze and respond with:
                       <div style={{ fontSize: 28 }}>{m.emoji}</div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 22, fontWeight: 800, color: done ? "#4ade80" : "#2a2a3e" }}>{m.height}"</div>
-                        <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: done ? "#44665a" : "#7777a0" }}>{m.label}</div>
+                        <div style={{ ...dim, color: done ? "#88ccaa" : "#9999bb" }}>{m.label}</div>
                       </div>
-                      {done
-                        ? <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: "#4ade80", letterSpacing: 1 }}>✓</span>
-                        : <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#9999bb" }}>{m.height - maxJump}" out</span>}
+                      {done ? <span style={{ ...dim, fontSize: 10, color: "#4ade80" }}>✓</span>
+                             : <span style={{ ...dim }}>{m.height - maxJump}" out</span>}
                     </div>
                   );
                 })}
               </div>
               <div>
-                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#9999bb", letterSpacing: 2, marginBottom: 14 }}>SQUAT STRENGTH</div>
+                <div style={{ ...dim, letterSpacing: 2, marginBottom: 14 }}>SQUAT STRENGTH</div>
                 {SQUAT_MILESTONES.map(m => {
                   const done = maxSquat >= m.weight;
                   return (
@@ -578,11 +727,10 @@ Please analyze and respond with:
                       <div style={{ fontSize: 28 }}>{m.emoji}</div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 22, fontWeight: 800, color: done ? "#facc15" : "#2a2a3e" }}>{m.weight} lbs</div>
-                        <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: done ? "#66601a" : "#7777a0" }}>{m.label}</div>
+                        <div style={{ ...dim, color: done ? "#ccaa44" : "#9999bb" }}>{m.label}</div>
                       </div>
-                      {done
-                        ? <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: "#facc15", letterSpacing: 1 }}>✓</span>
-                        : <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#9999bb" }}>{m.weight - maxSquat} lbs out</span>}
+                      {done ? <span style={{ ...dim, fontSize: 10, color: "#facc15" }}>✓</span>
+                             : <span style={{ ...dim }}>{m.weight - maxSquat} lbs out</span>}
                     </div>
                   );
                 })}
@@ -592,7 +740,7 @@ Please analyze and respond with:
         )}
       </div>
 
-      {/* ── LOG SESSION MODAL ── */}
+      {/* LOG SESSION MODAL */}
       {showForm && (
         <div className="overlay" onClick={() => setShowForm(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -605,15 +753,13 @@ Please analyze and respond with:
               </div>
               <div className="g2">
                 <div><div style={lbl}>Week #</div><input type="number" className="inp" min={1} max={30} value={form.week} onChange={e => setForm(f => ({ ...f, week: e.target.value }))} /></div>
-                <div>
-                  <div style={lbl}>Phase</div>
+                <div><div style={lbl}>Phase</div>
                   <select className="inp" value={form.phase} onChange={e => setForm(f => ({ ...f, phase: e.target.value }))}>
                     {PHASES.map(p => <option key={p.id} value={p.id}>Phase {p.id} — {p.name}</option>)}
                   </select>
                 </div>
               </div>
-              <div>
-                <div style={lbl}>Session Type</div>
+              <div><div style={lbl}>Session Type</div>
                 <select className="inp" value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
                   {SESSION_TYPES.map(t => <option key={t}>{t}</option>)}
                 </select>
@@ -628,8 +774,7 @@ Please analyze and respond with:
               </div>
               <div><div style={lbl}>Key Lifts / Load Notes</div><input type="text" className="inp" placeholder="e.g. RDL 155 lbs, split squat 40 lb DBs" value={form.load} onChange={e => setForm(f => ({ ...f, load: e.target.value }))} /></div>
               <div className="g2">
-                <div>
-                  <div style={lbl}>Cardio Type</div>
+                <div><div style={lbl}>Cardio Type</div>
                   <select className="inp" value={form.cardioType} onChange={e => setForm(f => ({ ...f, cardioType: e.target.value }))}>
                     <option value="">None</option>
                     {CARDIO_TYPES.map(t => <option key={t}>{t}</option>)}
@@ -647,20 +792,19 @@ Please analyze and respond with:
         </div>
       )}
 
-      {/* ── FEEDBACK MODAL ── */}
+      {/* FEEDBACK MODAL */}
       {showFeedback && (
         <div className="overlay" onClick={() => setShowFeedback(false)}>
           <div className="modal" style={{ maxWidth: 640 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: 1 }}>AI FEEDBACK SUMMARY</div>
-              <button onClick={copyFeedback} style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 13, fontWeight: 600, background: copied ? "#22c55e" : "#4ade80", color: "#0b0b12", border: "none", borderRadius: 7, padding: "8px 18px", cursor: "pointer", transition: "background 0.2s" }}>
+              <button onClick={() => { navigator.clipboard.writeText(feedbackText); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                style={{ ...body, fontWeight: 600, background: copied ? "#22c55e" : "#4ade80", color: "#0b0b12", border: "none", borderRadius: 7, padding: "8px 18px", cursor: "pointer" }}>
                 {copied ? "✓ Copied!" : "Copy All"}
               </button>
             </div>
-            <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#aaaacc", marginBottom: 12 }}>
-              Copy → open a new Claude chat → paste. Claude will give you bodyweight-adjusted analysis and plan adjustments.
-            </div>
-            <pre style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11.5, color: "#aaaacc", background: "#0d0d15", borderRadius: 10, padding: 16, whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.75, maxHeight: 420, overflowY: "auto" }}>
+            <div style={{ ...dim, marginBottom: 12 }}>Copy → open a new Claude chat → paste for bodyweight-adjusted analysis.</div>
+            <pre style={{ ...dim, fontSize: 11.5, color: "#aaaacc", background: "#0d0d15", borderRadius: 10, padding: 16, whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.75, maxHeight: 420, overflowY: "auto" }}>
               {feedbackText}
             </pre>
             <button className="btn-o" style={{ marginTop: 16, width: "100%" }} onClick={() => setShowFeedback(false)}>Close</button>
