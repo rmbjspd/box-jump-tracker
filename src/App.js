@@ -204,7 +204,7 @@ Please analyze and respond with:
 
   // ── Shared style helpers ──
   const card  = { background: "#111118", border: "1px solid #1d1d2e", borderRadius: 14, padding: "20px 22px" };
-  const lbl   = { fontFamily: "'DM Sans', sans-serif", fontSize: 10, color: "#44445a", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 6 };
+  const lbl   = { fontFamily: "'DM Sans', sans-serif", fontSize: 10, color: "#9999bb", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 6 };
 
   if (loading) return (
     <div style={{ background: "#0b0b12", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Barlow Condensed', sans-serif", color: "#4ade80", fontSize: 28, letterSpacing: 3 }}>
@@ -219,9 +219,9 @@ Please analyze and respond with:
         @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         ::-webkit-scrollbar { width: 3px; } ::-webkit-scrollbar-track { background: #0b0b12; } ::-webkit-scrollbar-thumb { background: #2a2a40; border-radius: 2px; }
-        .tab { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 10px 18px; background: none; border: none; color: #33334a; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.18s; white-space: nowrap; }
+        .tab { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 10px 18px; background: none; border: none; color: #7777a0; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.18s; white-space: nowrap; }
         .tab.on { color: #4ade80; border-bottom-color: #4ade80; }
-        .tab:hover:not(.on) { color: #666680; }
+        .tab:hover:not(.on) { color: #aaaacc; }
         .inp { font-family: 'DM Sans', sans-serif; background: #16161f; border: 1px solid #22223a; border-radius: 8px; color: #e8e8f0; padding: 10px 13px; width: 100%; font-size: 13px; outline: none; transition: border-color 0.2s; }
         .inp:focus { border-color: #4ade80; }
         .inp option { background: #16161f; }
@@ -251,7 +251,7 @@ Please analyze and respond with:
             <div>
               <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: "#4ade80", letterSpacing: 3, marginBottom: 5 }}>PROJECT</div>
               <div style={{ fontSize: 48, fontWeight: 800, lineHeight: 1, letterSpacing: 1 }}>36-INCH <span style={{ color: "#4ade80" }}>COUNTER</span></div>
-              <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#33334a", marginTop: 6 }}>255 lbs · 6'1" · Vertical Explosion Protocol · Goal: Oct 1, 2026</div>
+              <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#aaaacc", marginTop: 6 }}>255 lbs · 6'1" · Vertical Explosion Protocol · Goal: Oct 1, 2026</div>
             </div>
             <div style={{ display: "flex", alignItems: "stretch" }}>
               {[
@@ -263,7 +263,7 @@ Please analyze and respond with:
                 <div key={i} style={{ padding: "10px 20px", borderLeft: i > 0 ? "1px solid #16162a" : "none", textAlign: "center", minWidth: 80 }}>
                   <div style={{ fontSize: 34, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.val}</div>
                   {s.unit && <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: s.color, opacity: 0.6 }}>{s.unit}</div>}
-                  <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 9, color: "#33334a", letterSpacing: 1.5, marginTop: 3 }}>{s.sub}</div>
+                  <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 9, color: "#9999bb", letterSpacing: 1.5, marginTop: 3 }}>{s.sub}</div>
                 </div>
               ))}
             </div>
@@ -277,7 +277,7 @@ Please analyze and respond with:
             ].map(b => (
               <div key={b.label}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                  <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#33334a" }}>{b.label}</span>
+                  <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#ccccdd" }}>{b.label}</span>
                   <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: b.textColor }}>{b.pct}%</span>
                 </div>
                 <div className="pbar"><div className="pfill" style={{ width: `${b.pct}%`, background: b.color }} /></div>
@@ -311,31 +311,31 @@ Please analyze and respond with:
               <div style={{ ...card, borderColor: currentPhase.color + "44" }}>
                 <div style={lbl}>Active Phase</div>
                 <div style={{ fontSize: 22, fontWeight: 700, color: currentPhase.color }}>{currentPhase.name}</div>
-                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#44445a", marginTop: 5 }}>{currentPhase.description}</div>
+                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#9999bb", marginTop: 5 }}>{currentPhase.description}</div>
                 <div style={{ marginTop: 12 }}>
                   <div className="pbar"><div className="pfill" style={{ width: `${Math.min(Math.round(((currentWeek - currentPhase.startWeek) / currentPhase.weeks) * 100), 100)}%`, background: currentPhase.color }} /></div>
-                  <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: "#33334a", marginTop: 4 }}>Wk {currentWeek - currentPhase.startWeek + 1} of {currentPhase.weeks} · {currentPhase.squatTarget}</div>
+                  <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: "#9999bb", marginTop: 4 }}>Wk {currentWeek - currentPhase.startWeek + 1} of {currentPhase.weeks} · {currentPhase.squatTarget}</div>
                 </div>
               </div>
               {/* jump milestone */}
               <div style={card}>
                 <div style={lbl}>Next Jump Milestone</div>
                 <div style={{ fontSize: 42, fontWeight: 800 }}>{nextJumpMilestone.emoji} {nextJumpMilestone.height}"</div>
-                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#44445a" }}>{nextJumpMilestone.label} · {nextJumpMilestone.height - maxJump}" to go</div>
+                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#9999bb" }}>{nextJumpMilestone.label} · {nextJumpMilestone.height - maxJump}" to go</div>
                 <div style={{ marginTop: 10 }}><div className="pbar"><div className="pfill" style={{ width: `${Math.round((maxJump / nextJumpMilestone.height) * 100)}%`, background: "#4ade80" }} /></div></div>
               </div>
               {/* squat milestone */}
               <div style={card}>
                 <div style={lbl}>Next Squat Milestone</div>
                 <div style={{ fontSize: 42, fontWeight: 800, color: "#facc15" }}>{nextSquatMilestone.emoji} {nextSquatMilestone.weight}</div>
-                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#44445a" }}>{nextSquatMilestone.label} · {nextSquatMilestone.weight - maxSquat} lbs to go</div>
+                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#9999bb" }}>{nextSquatMilestone.label} · {nextSquatMilestone.weight - maxSquat} lbs to go</div>
                 <div style={{ marginTop: 10 }}><div className="pbar"><div className="pfill" style={{ width: `${Math.round((maxSquat / nextSquatMilestone.weight) * 100)}%`, background: "#facc15" }} /></div></div>
               </div>
               {/* weeks */}
               <div style={card}>
                 <div style={lbl}>Timeline</div>
                 <div style={{ fontSize: 42, fontWeight: 800, color: "#f97316" }}>{weeksLeft}</div>
-                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#44445a" }}>weeks remaining of {TOTAL_WEEKS}</div>
+                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#9999bb" }}>weeks remaining of {TOTAL_WEEKS}</div>
                 <div style={{ marginTop: 10 }}><div className="pbar"><div className="pfill" style={{ width: `${Math.round((currentWeek / TOTAL_WEEKS) * 100)}%`, background: "#f97316" }} /></div></div>
               </div>
             </div>
@@ -347,7 +347,7 @@ Please analyze and respond with:
                 <ResponsiveContainer width="100%" height={190}>
                   <RadarChart data={radarData}>
                     <PolarGrid stroke="#1d1d2e" />
-                    <PolarAngleAxis dataKey="axis" tick={{ fill: "#44445a", fontSize: 10, fontFamily: "DM Sans" }} />
+                    <PolarAngleAxis dataKey="axis" tick={{ fill: "#9999bb", fontSize: 10, fontFamily: "DM Sans" }} />
                     <Radar dataKey="value" stroke="#4ade80" fill="#4ade80" fillOpacity={0.12} strokeWidth={1.5} />
                   </RadarChart>
                 </ResponsiveContainer>
@@ -358,15 +358,15 @@ Please analyze and respond with:
                   <ResponsiveContainer width="100%" height={190}>
                     <LineChart data={heightData}>
                       <CartesianGrid stroke="#1a1a28" strokeDasharray="3 3" />
-                      <XAxis dataKey="week" tick={{ fill: "#44445a", fontSize: 10 }} />
-                      <YAxis domain={[0, 40]} tick={{ fill: "#44445a", fontSize: 10 }} unit='"' />
+                      <XAxis dataKey="week" tick={{ fill: "#9999bb", fontSize: 10 }} />
+                      <YAxis domain={[0, 40]} tick={{ fill: "#9999bb", fontSize: 10 }} unit='"' />
                       <Tooltip contentStyle={{ background: "#111118", border: "1px solid #1d1d2e", fontFamily: "DM Sans", fontSize: 12 }} formatter={v => [`${v}"`, "Height"]} />
                       <ReferenceLine y={36} stroke="#f43f5e" strokeDasharray="4 4" />
                       <Line type="monotone" dataKey="height" stroke="#4ade80" strokeWidth={2.5} dot={{ fill: "#4ade80", r: 4 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 13, color: "#33334a", height: 190, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "0 20px" }}>
+                  <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 13, color: "#9999bb", height: 190, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "0 20px" }}>
                     Log a session with a box height to see your jump curve
                   </div>
                 )}
@@ -378,7 +378,7 @@ Please analyze and respond with:
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 14 }}>
                 <div>
                   <div style={{ fontSize: 22, fontWeight: 700, color: "#4ade80" }}>AI FEEDBACK ENGINE</div>
-                  <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#33554a", marginTop: 4 }}>Generate a full training snapshot → paste into a new Claude chat for analysis & adjustments</div>
+                  <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#66aa88", marginTop: 4 }}>Generate a full training snapshot → paste into a new Claude chat for analysis & adjustments</div>
                 </div>
                 <button className="btn-g" onClick={generateFeedback}>Generate Summary</button>
               </div>
@@ -393,7 +393,7 @@ Please analyze and respond with:
               <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: 1 }}>SESSION LOG</div>
               <button className="btn-g" onClick={() => setShowForm(true)}>+ Log Session</button>
             </div>
-            {sessions.length === 0 && <div style={{ fontFamily: "'DM Sans',sans-serif", color: "#33334a", textAlign: "center", padding: "60px 0" }}>No sessions yet — hit "+ Log Session" to start</div>}
+            {sessions.length === 0 && <div style={{ fontFamily: "'DM Sans',sans-serif", color: "#9999bb", textAlign: "center", padding: "60px 0" }}>No sessions yet — hit "+ Log Session" to start</div>}
             {[...sessions].reverse().map(s => {
               const ph = PHASES[s.phase - 1];
               return (
@@ -401,7 +401,7 @@ Please analyze and respond with:
                   <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 17, fontWeight: 700 }}>{s.type}</div>
-                      <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#44445a", marginTop: 3, lineHeight: 1.7 }}>
+                      <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 13, color: "#b0b0cc", marginTop: 3, lineHeight: 1.7 }}>
                         {s.date} · Wk {s.week}
                         {s.box_height   ? <span style={{ color: "#4ade80" }}> · 📦 {s.box_height}"</span> : ""}
                         {s.squat_weight ? <span style={{ color: "#facc15" }}> · 🏋️ {s.squat_weight} lbs</span> : ""}
@@ -410,7 +410,7 @@ Please analyze and respond with:
                         {s.cardio_type  ? <span style={{ color: "#f97316" }}> · {s.cardio_type} {s.cardio_minutes}min</span> : ""}
                         {s.bodyweight   ? <span style={{ color: "#a78bfa" }}> · BW: {s.bodyweight} lbs</span> : ""}
                       </div>
-                      {s.notes && <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#55556a", marginTop: 4, fontStyle: "italic" }}>"{s.notes}"</div>}
+                      {s.notes && <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#9999bb", marginTop: 4, fontStyle: "italic" }}>"{s.notes}"</div>}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span className="badge" style={{ background: ph?.color + "22", color: ph?.color }}>P{s.phase}</span>
@@ -433,15 +433,15 @@ Please analyze and respond with:
                 <ResponsiveContainer width="100%" height={260}>
                   <LineChart data={heightData} margin={{ top: 16, right: 16, bottom: 0, left: 0 }}>
                     <CartesianGrid stroke="#1a1a28" strokeDasharray="3 3" />
-                    <XAxis dataKey="week" tick={{ fill: "#44445a", fontSize: 11, fontFamily: "DM Sans" }} />
-                    <YAxis domain={[0, 40]} tick={{ fill: "#44445a", fontSize: 11 }} unit='"' />
+                    <XAxis dataKey="week" tick={{ fill: "#9999bb", fontSize: 11, fontFamily: "DM Sans" }} />
+                    <YAxis domain={[0, 40]} tick={{ fill: "#9999bb", fontSize: 11 }} unit='"' />
                     <Tooltip contentStyle={{ background: "#111118", border: "1px solid #4ade80", fontFamily: "DM Sans" }} formatter={v => [`${v}"`, "Jump height"]} />
                     <ReferenceLine y={36} stroke="#f43f5e" strokeDasharray="5 5" label={{ value: "🎯 36\" GOAL", fill: "#f43f5e", fontSize: 11 }} />
                     <ReferenceLine y={24} stroke="#facc1566" strokeDasharray="3 3" />
                     <Line type="monotone" dataKey="height" stroke="#4ade80" strokeWidth={3} dot={{ fill: "#4ade80", r: 5 }} activeDot={{ r: 7, fill: "#22d3ee" }} />
                   </LineChart>
                 </ResponsiveContainer>
-              ) : <div style={{ fontFamily: "'DM Sans',sans-serif", color: "#33334a", padding: "60px 0", textAlign: "center" }}>No jump data yet</div>}
+              ) : <div style={{ fontFamily: "'DM Sans',sans-serif", color: "#9999bb", padding: "60px 0", textAlign: "center" }}>No jump data yet</div>}
             </div>
             <div className="g2">
               <div style={card}>
@@ -450,15 +450,15 @@ Please analyze and respond with:
                   <ResponsiveContainer width="100%" height={200}>
                     <LineChart data={squatData}>
                       <CartesianGrid stroke="#1a1a28" strokeDasharray="3 3" />
-                      <XAxis dataKey="week" tick={{ fill: "#44445a", fontSize: 10 }} />
-                      <YAxis domain={[0, 420]} tick={{ fill: "#44445a", fontSize: 10 }} unit=" lbs" />
+                      <XAxis dataKey="week" tick={{ fill: "#9999bb", fontSize: 10 }} />
+                      <YAxis domain={[0, 420]} tick={{ fill: "#9999bb", fontSize: 10 }} unit=" lbs" />
                       <Tooltip contentStyle={{ background: "#111118", border: "1px solid #facc15", fontFamily: "DM Sans" }} formatter={v => [`${v} lbs`, "Squat"]} />
                       <ReferenceLine y={380} stroke="#f43f5e" strokeDasharray="4 4" label={{ value: "380 target", fill: "#f43f5e", fontSize: 10 }} />
                       <ReferenceLine y={225} stroke="#facc1566" strokeDasharray="3 3" />
                       <Line type="monotone" dataKey="squat" stroke="#facc15" strokeWidth={2.5} dot={{ fill: "#facc15", r: 4 }} />
                     </LineChart>
                   </ResponsiveContainer>
-                ) : <div style={{ fontFamily: "'DM Sans',sans-serif", color: "#33334a", padding: "40px 0", textAlign: "center", fontSize: 13 }}>Log squat weight to track</div>}
+                ) : <div style={{ fontFamily: "'DM Sans',sans-serif", color: "#9999bb", padding: "40px 0", textAlign: "center", fontSize: 13 }}>Log squat weight to track</div>}
               </div>
               <div style={card}>
                 <div style={lbl}>Bodyweight Over Time</div>
@@ -466,14 +466,14 @@ Please analyze and respond with:
                   <ResponsiveContainer width="100%" height={200}>
                     <LineChart data={bwData}>
                       <CartesianGrid stroke="#1a1a28" strokeDasharray="3 3" />
-                      <XAxis dataKey="week" tick={{ fill: "#44445a", fontSize: 10 }} />
-                      <YAxis domain={[220, 265]} tick={{ fill: "#44445a", fontSize: 10 }} unit=" lbs" />
+                      <XAxis dataKey="week" tick={{ fill: "#9999bb", fontSize: 10 }} />
+                      <YAxis domain={[220, 265]} tick={{ fill: "#9999bb", fontSize: 10 }} unit=" lbs" />
                       <Tooltip contentStyle={{ background: "#111118", border: "1px solid #a78bfa", fontFamily: "DM Sans" }} formatter={v => [`${v} lbs`, "BW"]} />
                       <ReferenceLine y={240} stroke="#4ade8066" strokeDasharray="3 3" label={{ value: "240 target", fill: "#4ade80", fontSize: 10 }} />
                       <Line type="monotone" dataKey="bw" stroke="#a78bfa" strokeWidth={2.5} dot={{ fill: "#a78bfa", r: 4 }} />
                     </LineChart>
                   </ResponsiveContainer>
-                ) : <div style={{ fontFamily: "'DM Sans',sans-serif", color: "#33334a", padding: "40px 0", textAlign: "center", fontSize: 13 }}>Log bodyweight each session to track</div>}
+                ) : <div style={{ fontFamily: "'DM Sans',sans-serif", color: "#9999bb", padding: "40px 0", textAlign: "center", fontSize: 13 }}>Log bodyweight each session to track</div>}
               </div>
             </div>
             <div style={card}>
@@ -492,7 +492,7 @@ Please analyze and respond with:
                 ].map(item => (
                   <div key={item.label} style={{ background: "#0d0d15", borderRadius: 10, padding: "14px 16px" }}>
                     <div style={{ fontSize: 36, fontWeight: 800, color: item.color }}>{item.count}</div>
-                    <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#44445a", marginTop: 2 }}>{item.label}</div>
+                    <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#9999bb", marginTop: 2 }}>{item.label}</div>
                   </div>
                 ))}
               </div>
@@ -517,27 +517,27 @@ Please analyze and respond with:
                       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                         <div style={{ fontSize: 26, fontWeight: 800, color: phase.color }}>PHASE {phase.id}</div>
                         {isActive   && <span className="badge" style={{ background: phase.color + "22", color: phase.color }}>ACTIVE</span>}
-                        {isComplete && <span className="badge" style={{ background: "#ffffff0a", color: "#33334a" }}>DONE</span>}
+                        {isComplete && <span className="badge" style={{ background: "#ffffff0a", color: "#9999bb" }}>DONE</span>}
                         {phase.deloadWeeks.length > 0 && <span className="badge" style={{ background: "#f9731622", color: "#f97316" }}>Deloads: Wk {phase.deloadWeeks.join(", ")}</span>}
                       </div>
                       <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 14, color: "#c0c0d0", marginTop: 3 }}>{phase.name}</div>
-                      <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#44445a", marginTop: 4 }}>{phase.description}</div>
+                      <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#9999bb", marginTop: 4 }}>{phase.description}</div>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#33334a" }}>Weeks {phase.startWeek}–{phase.endWeek} · {phase.weeks} wks</div>
+                      <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#9999bb" }}>Weeks {phase.startWeek}–{phase.endWeek} · {phase.weeks} wks</div>
                       {phase.targetHeight > 0 && <div style={{ fontSize: 22, fontWeight: 800, color: phase.color, marginTop: 4 }}>Jump target: {phase.targetHeight}"</div>}
-                      <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#55556a", marginTop: 2 }}>{phase.squatTarget}</div>
+                      <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#9999bb", marginTop: 2 }}>{phase.squatTarget}</div>
                     </div>
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: isActive ? 12 : 0 }}>
                     {phase.keyFocus.map(f => (
-                      <span key={f} style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, background: "#16161f", border: "1px solid #22223a", borderRadius: 6, padding: "3px 9px", color: "#66667a" }}>{f}</span>
+                      <span key={f} style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, background: "#16161f", border: "1px solid #22223a", borderRadius: 6, padding: "3px 9px", color: "#ccccdd" }}>{f}</span>
                     ))}
                   </div>
                   {isActive && (
                     <div>
                       <div className="pbar"><div className="pfill" style={{ width: `${Math.min(Math.round(((currentWeek - phase.startWeek) / phase.weeks) * 100), 100)}%`, background: phase.color }} /></div>
-                      <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: "#33334a", marginTop: 4 }}>Week {currentWeek - phase.startWeek + 1} of {phase.weeks}</div>
+                      <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: "#9999bb", marginTop: 4 }}>Week {currentWeek - phase.startWeek + 1} of {phase.weeks}</div>
                     </div>
                   )}
                 </div>
@@ -552,7 +552,7 @@ Please analyze and respond with:
             <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: 1, marginBottom: 20 }}>MILESTONES</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
               <div>
-                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#44445a", letterSpacing: 2, marginBottom: 14 }}>JUMP HEIGHT</div>
+                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#9999bb", letterSpacing: 2, marginBottom: 14 }}>JUMP HEIGHT</div>
                 {JUMP_MILESTONES.map(m => {
                   const done = maxJump >= m.height;
                   return (
@@ -560,17 +560,17 @@ Please analyze and respond with:
                       <div style={{ fontSize: 28 }}>{m.emoji}</div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 22, fontWeight: 800, color: done ? "#4ade80" : "#2a2a3e" }}>{m.height}"</div>
-                        <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: done ? "#44665a" : "#33334a" }}>{m.label}</div>
+                        <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: done ? "#44665a" : "#7777a0" }}>{m.label}</div>
                       </div>
                       {done
                         ? <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: "#4ade80", letterSpacing: 1 }}>✓</span>
-                        : <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#33334a" }}>{m.height - maxJump}" out</span>}
+                        : <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#9999bb" }}>{m.height - maxJump}" out</span>}
                     </div>
                   );
                 })}
               </div>
               <div>
-                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#44445a", letterSpacing: 2, marginBottom: 14 }}>SQUAT STRENGTH</div>
+                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#9999bb", letterSpacing: 2, marginBottom: 14 }}>SQUAT STRENGTH</div>
                 {SQUAT_MILESTONES.map(m => {
                   const done = maxSquat >= m.weight;
                   return (
@@ -578,11 +578,11 @@ Please analyze and respond with:
                       <div style={{ fontSize: 28 }}>{m.emoji}</div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 22, fontWeight: 800, color: done ? "#facc15" : "#2a2a3e" }}>{m.weight} lbs</div>
-                        <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: done ? "#66601a" : "#33334a" }}>{m.label}</div>
+                        <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: done ? "#66601a" : "#7777a0" }}>{m.label}</div>
                       </div>
                       {done
                         ? <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: "#facc15", letterSpacing: 1 }}>✓</span>
-                        : <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#33334a" }}>{m.weight - maxSquat} lbs out</span>}
+                        : <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#9999bb" }}>{m.weight - maxSquat} lbs out</span>}
                     </div>
                   );
                 })}
@@ -657,10 +657,10 @@ Please analyze and respond with:
                 {copied ? "✓ Copied!" : "Copy All"}
               </button>
             </div>
-            <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#33334a", marginBottom: 12 }}>
+            <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#aaaacc", marginBottom: 12 }}>
               Copy → open a new Claude chat → paste. Claude will give you bodyweight-adjusted analysis and plan adjustments.
             </div>
-            <pre style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11.5, color: "#88889a", background: "#0d0d15", borderRadius: 10, padding: 16, whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.75, maxHeight: 420, overflowY: "auto" }}>
+            <pre style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11.5, color: "#aaaacc", background: "#0d0d15", borderRadius: 10, padding: 16, whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.75, maxHeight: 420, overflowY: "auto" }}>
               {feedbackText}
             </pre>
             <button className="btn-o" style={{ marginTop: 16, width: "100%" }} onClick={() => setShowFeedback(false)}>Close</button>
