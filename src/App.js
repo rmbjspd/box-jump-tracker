@@ -84,10 +84,16 @@ const CARDIO_TYPES = ["Swimming","Biking","Running","Other"];
 const JUMP_MILESTONES  = [{ height: 12, label: "First jump", emoji: "🌱" },{ height: 18, label: "Phase 2 target", emoji: "⚡" },{ height: 24, label: "2-foot barrier", emoji: "🔥" },{ height: 30, label: "Phase 3 target", emoji: "💥" },{ height: 33, label: "3 inches out", emoji: "🎯" },{ height: 36, label: "GOAL", emoji: "🏆" }];
 const SQUAT_MILESTONES = [{ weight: 135, label: "Plate on each side", emoji: "🔩" },{ weight: 185, label: "Phase 1 target", emoji: "💪" },{ weight: 225, label: "Phase 2 target", emoji: "⚡" },{ weight: 275, label: "~1.1× BW", emoji: "🔥" },{ weight: 315, label: "Three plates", emoji: "💥" },{ weight: 380, label: "1.5× BW — jump ready", emoji: "🏆" }];
 
-const phaseFor  = (week) => PHASES.find(p => week >= p.startWeek && week <= p.endWeek) || PHASES[0];
-const todayStr  = () => new Date().toISOString().split("T")[0];
-const todayDOW  = () => { const d = new Date(); return DAYS_ORDER[(d.getDay() + 6) % 7]; };
-const isDeload  = (week, phase) => phase?.deloadWeeks?.includes(week);
+const phaseFor    = (week) => PHASES.find(p => week >= p.startWeek && week <= p.endWeek) || PHASES[0];
+const todayStr    = () => new Date().toISOString().split("T")[0];
+const todayDOW    = () => { const d = new Date(); return DAYS_ORDER[(d.getDay() + 6) % 7]; };
+const isDeload    = (week, phase) => phase?.deloadWeeks?.includes(week);
+const weekForDate = (dateStr, startDate) => {
+  const start = new Date(startDate); start.setHours(0,0,0,0);
+  const d     = new Date(dateStr);   d.setHours(0,0,0,0);
+  const diff  = Math.floor((d - start) / 86400000);
+  return Math.min(Math.max(Math.ceil((diff + 1) / 7), 1), TOTAL_WEEKS);
+};
 
 const dateForDOW = (dow) => {
   const today = new Date();
@@ -116,6 +122,11 @@ export default function App() {
   const [feedbackText, setFeedbackText]     = useState("");
   const [copied, setCopied]                 = useState(false);
   const [form, setForm]                     = useState(BLANK_FORM);
+  const [editWeekPhase, setEditWeekPhase]   = useState(false);
+  const [showStartEdit, setShowStartEdit]   = useState(false);
+  const [programStart, setProgramStart]     = useState(
+    () => localStorage.getItem("programStartDate") || "2026-03-10"
+  );
 
   useEffect(() => {
     async function load() {
@@ -129,7 +140,7 @@ export default function App() {
   }, []);
 
   // ── Derived stats ──
-  const currentWeek        = sessions.length ? Math.max(...sessions.map(s => s.week), 1) : 1;
+  const currentWeek        = weekForDate(todayStr(), programStart);
   const currentPhase       = phaseFor(currentWeek);
   const maxJump            = Math.max(...sessions.map(s => s.box_height || 0), 0);
   const maxSquat           = Math.max(...sessions.map(s => s.squat_weight || 0), 105);
@@ -158,9 +169,13 @@ export default function App() {
 
   // ── Open form helpers ──
   const openForm = useCallback((prefill = {}) => {
-    setForm({ ...BLANK_FORM, week: String(currentWeek), phase: String(currentPhase.id), ...prefill });
+    const date  = prefill.date || todayStr();
+    const week  = weekForDate(date, programStart);
+    const phase = phaseFor(week);
+    setEditWeekPhase(false);
+    setForm({ ...BLANK_FORM, bodyweight: String(latestBW), week: String(week), phase: String(phase.id), date, ...prefill });
     setShowForm(true);
-  }, [currentWeek, currentPhase]);
+  }, [latestBW, programStart]);
 
   const openFormFromPlan = useCallback((dow) => {
     const plan = PHASE_PLANS[currentPhase.id]?.days[dow];
@@ -301,6 +316,22 @@ export default function App() {
               <div style={{ ...dim, fontSize: 10, color: "#4ade80", letterSpacing: 3, marginBottom: 5 }}>PROJECT</div>
               <div style={{ fontSize: 48, fontWeight: 800, lineHeight: 1, letterSpacing: 1 }}>36-INCH <span style={{ color: "#4ade80" }}>COUNTER</span></div>
               <div style={{ ...dim, color: "#aaaacc", marginTop: 6 }}>255 lbs · 6'1" · Vertical Explosion Protocol · Goal: Oct 1, 2026</div>
+              <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ ...dim, fontSize: 11, color: "#66667a" }}>
+                  Program started:{" "}
+                  {showStartEdit ? (
+                    <input type="date" value={programStart} autoFocus
+                      onChange={e => { setProgramStart(e.target.value); localStorage.setItem("programStartDate", e.target.value); }}
+                      onBlur={() => setShowStartEdit(false)}
+                      style={{ background: "#16161f", border: "1px solid #22223a", borderRadius: 5, color: "#e8e8f0", padding: "2px 7px", fontSize: 11, fontFamily: "'DM Sans',sans-serif", marginLeft: 2 }}
+                    />
+                  ) : (
+                    <span onClick={() => setShowStartEdit(true)} style={{ cursor: "pointer", textDecoration: "underline", color: "#9999bb" }}>
+                      {new Date(programStart + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </span>
+                  )}
+                </span>
+              </div>
             </div>
             <div style={{ display: "flex", alignItems: "stretch" }}>
               {[
@@ -748,17 +779,34 @@ export default function App() {
             {error && <div className="err">⚠ {error}</div>}
             <div style={{ display: "grid", gap: 13 }}>
               <div className="g2">
-                <div><div style={lbl}>Date</div><input type="date" className="inp" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} /></div>
-                <div><div style={lbl}>Bodyweight (lbs)</div><input type="number" className="inp" placeholder="255" value={form.bodyweight} onChange={e => setForm(f => ({ ...f, bodyweight: e.target.value }))} /></div>
-              </div>
-              <div className="g2">
-                <div><div style={lbl}>Week #</div><input type="number" className="inp" min={1} max={30} value={form.week} onChange={e => setForm(f => ({ ...f, week: e.target.value }))} /></div>
-                <div><div style={lbl}>Phase</div>
-                  <select className="inp" value={form.phase} onChange={e => setForm(f => ({ ...f, phase: e.target.value }))}>
-                    {PHASES.map(p => <option key={p.id} value={p.id}>Phase {p.id} — {p.name}</option>)}
-                  </select>
+                <div><div style={lbl}>Date</div><input type="date" className="inp" value={form.date} onChange={e => {
+                  const newDate  = e.target.value;
+                  const newWeek  = weekForDate(newDate, programStart);
+                  const newPhase = phaseFor(newWeek);
+                  setForm(f => ({ ...f, date: newDate, week: String(newWeek), phase: String(newPhase.id) }));
+                }} /></div>
+                <div><div style={lbl}>Bodyweight (lbs)</div><input type="number" className="inp" placeholder="255" value={form.bodyweight} onChange={e => setForm(f => ({ ...f, bodyweight: e.target.value }))} />
+                  {sessions.filter(s => s.bodyweight).slice(-1)[0] && <div style={{ ...dim, fontSize: 10, marginTop: 4 }}>Last: {sessions.filter(s => s.bodyweight).slice(-1)[0].bodyweight} lbs on {sessions.filter(s => s.bodyweight).slice(-1)[0].date}</div>}
                 </div>
               </div>
+              {editWeekPhase ? (
+                <div className="g2">
+                  <div><div style={lbl}>Week #</div><input type="number" className="inp" min={1} max={30} value={form.week} onChange={e => {
+                    const w = parseInt(e.target.value) || 1;
+                    setForm(f => ({ ...f, week: String(w), phase: String(phaseFor(w).id) }));
+                  }} /></div>
+                  <div><div style={lbl}>Phase</div>
+                    <select className="inp" value={form.phase} onChange={e => setForm(f => ({ ...f, phase: e.target.value }))}>
+                      {PHASES.map(p => <option key={p.id} value={p.id}>Phase {p.id} — {p.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={dim}>Week {form.week} · Phase {form.phase} · {phaseFor(parseInt(form.week) || 1).name}</div>
+                  <button type="button" onClick={() => setEditWeekPhase(true)} style={{ ...dim, fontSize: 11, background: "none", border: "none", color: "#9999bb", cursor: "pointer", textDecoration: "underline", padding: 0 }}>Edit</button>
+                </div>
+              )}
               <div><div style={lbl}>Session Type</div>
                 <select className="inp" value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
                   {SESSION_TYPES.map(t => <option key={t}>{t}</option>)}
