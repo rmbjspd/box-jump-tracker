@@ -10,7 +10,7 @@ import { supabase } from "./supabase";
 const PHASES = [
   { id: 1, name: "Foundation & Hypertrophy",    weeks: 10, startWeek: 1,  endWeek: 10, color: "#4ade80", targetHeight: 0,  description: "Extended to 10 wks for 255 lbs — tendon integrity, landing mechanics, posterior chain base", squatTarget: "Build to ~185 lbs (5×5)", deloadWeeks: [4, 8] },
   { id: 2, name: "Strength & Force Production", weeks: 8,  startWeek: 11, endWeek: 18, color: "#facc15", targetHeight: 18, description: "Close the strength gap — 1.5× BW squat is prerequisite for 36\"", squatTarget: "Build to ~225 lbs (3×5)", deloadWeeks: [14, 18] },
-  { id: 3, name: "Power & Rate of Force Dev",   weeks: 8,  startWeek: 19, endWeek: 26, color: "#f97316", targetHeight: 30, description: "Convert strength into explosion — conservative height progression, perfect mechanics", squatTarget: "Maintain 315 lbs+, shift to speed squats", deloadWeeks: [22, 26] },
+  { id: 3, name: "Power & Rate of Force Dev",   weeks: 8,  startWeek: 19, endWeek: 26, color: "#f97316", targetHeight: 30, description: "Convert strength into explosion — conservative height progression, perfect mechanics", squatTarget: "Enter Phase 3 at ~245–270 lbs; build toward 315 lbs peak, shift emphasis to speed squats", deloadWeeks: [22, 26] },
   { id: 4, name: "Peaking & Specificity",        weeks: 4,  startWeek: 27, endWeek: 30, color: "#f43f5e", targetHeight: 36, description: "Trimmed to 4 weeks — taper volume, keep intensity, attempt 36\"", squatTarget: "Low volume, high intensity maintenance", deloadWeeks: [] },
 ];
 const TOTAL_WEEKS = 30;
@@ -35,10 +35,10 @@ const PHASE_PLANS = {
     deloadMods: "Drop to 60% 1RM on squats. 3 sets max. No dynamic effort work.",
     days: {
       Mon: { label: "Max Strength Lower",     sessionType: "Lower Strength (Deadlifts, Split Squats)", detail: "Back squat 5×3 @85%+, Romanian DL 4×5, leg press 3×8. Log exact weights.", isRest: false },
-      Tue: { label: "Plyometric Intro",       sessionType: "Plyometrics",                              detail: "Box jump 5×3 @12–18\" (full reset between reps), depth drop 3×5 @12\", broad jump 3×4", isRest: false },
-      Wed: { label: "Rest",                   sessionType: null,                                        detail: "Full rest or light walk. CNS recovery.", isRest: true },
+      Tue: { label: "Rest",                   sessionType: null,                                        detail: "Full rest or light walk. CNS recovery — 48h after heavy squats before plyos.", isRest: true },
+      Wed: { label: "Plyometric Intro",       sessionType: "Plyometrics",                              detail: "Box jump 5×3 @12–18\" (full reset between reps), depth drop 3×5 @12\", broad jump 3×4", isRest: false },
       Thu: { label: "Speed Work",             sessionType: "Lower Power (Jumps + Squats)",             detail: "Dynamic effort squat 8×2 @50% 1RM (fast as possible), KB swing 4×8, box step-up 3×8/leg", isRest: false },
-      Fri: { label: "Accessory & Core",       sessionType: "Core & Stability",                         detail: "Bulgarian split squat 4×8/leg, weighted plank 3×45s, Nordic curl 3×6, hip thrust 4×10", isRest: false },
+      Fri: { label: "Accessory & Core",       sessionType: "Core & Stability",                         detail: "Bulgarian split squat 4×8/leg, weighted plank 3×45s, Nordic curl 3×4 (use band assist — high eccentric load at bodyweight), hip thrust 4×10", isRest: false },
       Sat: { label: "Broad Jumps + Upper",    sessionType: "Upper Pull",                               detail: "Broad jump 5×4 (max distance), pull-up 4×max, row 4×10, face pull 3×15", isRest: false },
       Sun: { label: "Rest",                   sessionType: null,                                        detail: "Full rest.", isRest: true },
     },
@@ -148,6 +148,7 @@ export default function App() {
   const bwDrop             = 255 - latestBW;
   const nextJumpMilestone  = JUMP_MILESTONES.find(m => m.height > maxJump) || JUMP_MILESTONES.at(-1);
   const nextSquatMilestone = SQUAT_MILESTONES.find(m => m.weight > maxSquat) || SQUAT_MILESTONES.at(-1);
+  const jumpCeiling        = (() => { const t = Math.min(maxSquat / (latestBW * 1.5), 1.0); return Math.round((18 + 18 * Math.sqrt(t)) * 10) / 10; })();
   const jumpProgress       = Math.round((maxJump / 36) * 100);
   const squatProgress      = Math.round(Math.min((maxSquat / 380) * 100, 100));
   const weeksLeft          = Math.max(0, TOTAL_WEEKS - currentWeek);
@@ -335,8 +336,9 @@ export default function App() {
             </div>
             <div style={{ display: "flex", alignItems: "stretch" }}>
               {[
-                { val: maxJump > 0 ? `${maxJump}"` : "—", sub: "BEST JUMP",   color: "#4ade80" },
-                { val: `${maxSquat}`,                       sub: "BEST SQUAT", color: "#facc15", unit: "lbs" },
+                { val: maxJump > 0 ? `${maxJump}"` : "—", sub: "BEST JUMP",      color: "#4ade80" },
+                { val: `${jumpCeiling}"`,                   sub: "STR CEILING",  color: "#facc1599" },
+                { val: `${maxSquat}`,                       sub: "BEST SQUAT",   color: "#facc15", unit: "lbs" },
                 { val: `${latestBW}`,                       sub: "BODYWEIGHT", color: bwDrop > 0 ? "#4ade80" : "#f97316", unit: "lbs" },
                 { val: `W${currentWeek}`,                   sub: `PHASE ${currentPhase.id}`, color: currentPhase.color },
               ].map((s, i) => (
@@ -487,7 +489,8 @@ export default function App() {
                       <XAxis dataKey="week" tick={{ fill: "#9999bb", fontSize: 10 }} />
                       <YAxis domain={[0, 40]} tick={{ fill: "#9999bb", fontSize: 10 }} unit='"' />
                       <Tooltip contentStyle={{ background: "#111118", border: "1px solid #1d1d2e", fontFamily: "DM Sans", fontSize: 12 }} formatter={v => [`${v}"`, "Height"]} />
-                      <ReferenceLine y={36} stroke="#f43f5e" strokeDasharray="4 4" />
+                      <ReferenceLine y={36} stroke="#f43f5e" strokeDasharray="4 4" label={{ value: '36" goal', position: "insideTopRight", fill: "#f43f5e", fontSize: 9, fontFamily: "DM Sans" }} />
+                      <ReferenceLine y={jumpCeiling} stroke="#facc15" strokeDasharray="5 3" strokeOpacity={0.6} label={{ value: `${jumpCeiling}" ceiling`, position: "insideBottomRight", fill: "#facc15", fontSize: 9, fontFamily: "DM Sans" }} />
                       <Line type="monotone" dataKey="height" stroke="#4ade80" strokeWidth={2.5} dot={{ fill: "#4ade80", r: 4 }} />
                     </LineChart>
                   </ResponsiveContainer>
