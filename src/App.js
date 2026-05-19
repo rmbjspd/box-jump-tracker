@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ReferenceLine, ResponsiveContainer, RadarChart, Radar,
@@ -6,67 +6,65 @@ import {
 } from "recharts";
 import { supabase } from "./supabase";
 
-// ─── PHASES ───────────────────────────────────────────────────────────────────
 const PHASES = [
   { id: 1, name: "Foundation & Hypertrophy",    weeks: 10, startWeek: 1,  endWeek: 10, color: "#4ade80", targetHeight: 0,  description: "Extended to 10 wks for 255 lbs — tendon integrity, landing mechanics, posterior chain base", squatTarget: "Build to ~185 lbs (5×5)", deloadWeeks: [4, 8] },
   { id: 2, name: "Strength & Force Production", weeks: 8,  startWeek: 11, endWeek: 18, color: "#facc15", targetHeight: 18, description: "Close the strength gap — 1.5× BW squat is prerequisite for 36\"", squatTarget: "Build to ~225 lbs (3×5)", deloadWeeks: [14, 18] },
   { id: 3, name: "Power & Rate of Force Dev",   weeks: 8,  startWeek: 19, endWeek: 26, color: "#f97316", targetHeight: 30, description: "Convert strength into explosion — conservative height progression, perfect mechanics", squatTarget: "Enter Phase 3 at ~245–270 lbs; build toward 315 lbs peak, shift emphasis to speed squats", deloadWeeks: [22, 26] },
-  { id: 4, name: "Peaking & Specificity",        weeks: 4,  startWeek: 27, endWeek: 30, color: "#f43f5e", targetHeight: 36, description: "Trimmed to 4 weeks — taper volume, keep intensity, attempt 36\"", squatTarget: "Low volume, high intensity maintenance", deloadWeeks: [] },
+  { id: 4, name: "Peaking & Specificity",       weeks: 4,  startWeek: 27, endWeek: 30, color: "#f43f5e", targetHeight: 36, description: "Trimmed to 4 weeks — taper volume, keep intensity, attempt 36\"", squatTarget: "Low volume, high intensity maintenance", deloadWeeks: [] },
 ];
 const TOTAL_WEEKS = 30;
 
-// ─── WEEKLY PLAN TEMPLATES PER PHASE ─────────────────────────────────────────
 const PHASE_PLANS = {
   1: {
     weeklyNote: "Focus on form over load. Step down from any box — never jump down.",
     deloadMods: "Cut all sets by 40%. Keep weight the same. Focus on perfect form. No new PRs.",
     days: {
-      Mon: { label: "Heavy Lower Body",       sessionType: "Lower Strength (Deadlifts, Split Squats)", detail: "Back squat 4×8, RDL 3×10, Bulgarian split squat 3×10/leg, calf raise 4×15", isRest: false },
-      Tue: { label: "Core & Pillar",          sessionType: "Core & Stability",                         detail: "Plank 3×60s, dead bug 3×12, glute bridge 3×15, Copenhagen plank 3×20s", isRest: false },
-      Wed: { label: "Active Recovery",        sessionType: "Recovery / Mobility",                      detail: "Hip flexor stretching, ankle dorsiflexion drills, foam roll quads & calves, 20 min walk", isRest: false },
-      Thu: { label: "Explosive Foundation",   sessionType: "Lower Power (Jumps + Squats)",             detail: "Kettlebell swing 5×10, goblet squat 4×10, box step-up 3×10/leg, med ball slam 3×8", isRest: false },
-      Fri: { label: "Upper Body & Trunk",     sessionType: "Upper Push",                               detail: "Push-up 4×12, pull-up 4×max, overhead press 3×10, med ball slam 3×8, farmer carry 3×30m", isRest: false },
-      Sat: { label: "Low-Level Plyometrics",  sessionType: "Plyometrics",                              detail: "Jump rope 3×2min, pogo jumps 4×20, broad jump 3×5 (land soft), ankle hops 3×15", isRest: false },
-      Sun: { label: "Rest",                   sessionType: null,                                        detail: "Full rest. Sleep 8+ hrs.", isRest: true },
+      Mon: { label: "Heavy Lower Body",      sessionType: "Lower Strength (Deadlifts, Split Squats)", detail: "Back squat 4×8, RDL 3×10, Bulgarian split squat 3×10/leg, calf raise 4×15", isRest: false },
+      Tue: { label: "Core & Pillar",         sessionType: "Core & Stability",                         detail: "Plank 3×60s, dead bug 3×12, glute bridge 3×15, Copenhagen plank 3×20s", isRest: false },
+      Wed: { label: "Active Recovery",       sessionType: "Recovery / Mobility",                      detail: "Hip flexor stretching, ankle dorsiflexion drills, foam roll quads & calves, 20 min walk", isRest: false },
+      Thu: { label: "Explosive Foundation",  sessionType: "Lower Power (Jumps + Squats)",             detail: "Kettlebell swing 5×10, goblet squat 4×10, box step-up 3×10/leg, med ball slam 3×8", isRest: false },
+      Fri: { label: "Upper Body & Trunk",    sessionType: "Upper Push",                               detail: "Push-up 4×12, pull-up 4×max, overhead press 3×10, med ball slam 3×8, farmer carry 3×30m", isRest: false },
+      Sat: { label: "Low-Level Plyometrics", sessionType: "Plyometrics",                              detail: "Jump rope 3×2min, pogo jumps 4×20, broad jump 3×5 (land soft), ankle hops 3×15", isRest: false },
+      Sun: { label: "Rest",                  sessionType: null,                                        detail: "Full rest. Sleep 8+ hrs.", isRest: true },
     },
   },
   2: {
     weeklyNote: "Squat numbers are the #1 metric this phase. Log every working set.",
     deloadMods: "Drop to 60% 1RM on squats. 3 sets max. No dynamic effort work.",
     days: {
-      Mon: { label: "Max Strength Lower",     sessionType: "Lower Strength (Deadlifts, Split Squats)", detail: "Back squat 5×3 @85%+, Romanian DL 4×5, leg press 3×8. Log exact weights.", isRest: false },
-      Tue: { label: "Rest",                   sessionType: null,                                        detail: "Full rest or light walk. CNS recovery — 48h after heavy squats before plyos.", isRest: true },
-      Wed: { label: "Plyometric Intro",       sessionType: "Plyometrics",                              detail: "Box jump 5×3 @12–18\" (full reset between reps), depth drop 3×5 @12\", broad jump 3×4", isRest: false },
-      Thu: { label: "Speed Work",             sessionType: "Lower Power (Jumps + Squats)",             detail: "Dynamic effort squat 8×2 @50% 1RM (fast as possible), KB swing 4×8, box step-up 3×8/leg", isRest: false },
-      Fri: { label: "Accessory & Core",       sessionType: "Core & Stability",                         detail: "Bulgarian split squat 4×8/leg, weighted plank 3×45s, Nordic curl 3×4 (use band assist — high eccentric load at bodyweight), hip thrust 4×10", isRest: false },
-      Sat: { label: "Broad Jumps + Upper",    sessionType: "Upper Pull",                               detail: "Broad jump 5×4 (max distance), pull-up 4×max, row 4×10, face pull 3×15", isRest: false },
-      Sun: { label: "Rest",                   sessionType: null,                                        detail: "Full rest.", isRest: true },
+      Mon: { label: "Max Strength Lower",  sessionType: "Lower Strength (Deadlifts, Split Squats)", detail: "Back squat 5×3 @85%+, Romanian DL 4×5, leg press 3×8. Log exact weights.", isRest: false },
+      Tue: { label: "Rest",               sessionType: null,                                         detail: "Full rest or light walk. CNS recovery — 48h after heavy squats before plyos.", isRest: true },
+      Wed: { label: "Plyometric Intro",   sessionType: "Plyometrics",                               detail: "Box jump 5×3 @12–18\" (full reset between reps), depth drop 3×5 @12\", broad jump 3×4", isRest: false },
+      Thu: { label: "Speed Work",         sessionType: "Lower Power (Jumps + Squats)",              detail: "Dynamic effort squat 8×2 @50% 1RM (fast as possible), KB swing 4×8, box step-up 3×8/leg", isRest: false },
+      Fri: { label: "Accessory & Core",   sessionType: "Core & Stability",                          detail: "Bulgarian split squat 4×8/leg, weighted plank 3×45s, Nordic curl 3×4 (use band assist — high eccentric load at bodyweight), hip thrust 4×10", isRest: false },
+      Sat: { label: "Broad Jumps + Upper",sessionType: "Upper Pull",                                detail: "Broad jump 5×4 (max distance), pull-up 4×max, row 4×10, face pull 3×15", isRest: false },
+      Sun: { label: "Rest",               sessionType: null,                                         detail: "Full rest.", isRest: true },
     },
   },
   3: {
     weeklyNote: "Jump quality over quantity. 3–5 max-effort jumps beats 15 sloppy ones. Full rest between reps.",
     deloadMods: "Cut jump volume in half. No new height PRs. Focus on landing quality.",
     days: {
-      Mon: { label: "Complex Training",       sessionType: "Complex Training (Squat → Depth Jump)",   detail: "Heavy squat 4×3 @80%, immediately: depth jump from 18\" 4×3. Rest 3 min between complexes.", isRest: false },
-      Tue: { label: "Upper Body",             sessionType: "Upper Push",                               detail: "Bench press 4×6, overhead press 3×8, dips 3×10, lateral raise 3×15. Optional: easy swim 20 min.", isRest: false },
-      Wed: { label: "Rest",                   sessionType: null,                                        detail: "Full rest. CNS needs 48h after Monday complex.", isRest: true },
-      Thu: { label: "Vertical Focus",         sessionType: "Lower Power (Jumps + Squats)",             detail: "Weighted jump squat 5×3 @20–30% BW, standing broad jump 4×4, tuck jump 3×5", isRest: false },
-      Fri: { label: "Depth Drops + Upper",    sessionType: "Upper Pull",                               detail: "Depth drop from 24\" 4×5 (stick every landing), pull-up 4×max, cable row 4×10, face pull 3×15", isRest: false },
-      Sat: { label: "High Box Jumps",         sessionType: "Plyometrics",                              detail: "Box jump 6×3 @24–30\" (max effort, full reset, step down). Log highest clean jump.", isRest: false },
-      Sun: { label: "Rest",                   sessionType: null,                                        detail: "Full rest.", isRest: true },
+      Mon: { label: "Complex Training",    sessionType: "Complex Training (Squat → Depth Jump)", detail: "Heavy squat 4×3 @80%, immediately: depth jump from 18\" 4×3. Rest 3 min between complexes.", isRest: false },
+      Tue: { label: "Upper Body",          sessionType: "Upper Push",                             detail: "Bench press 4×6, overhead press 3×8, dips 3×10, lateral raise 3×15. Optional: easy swim 20 min.", isRest: false },
+      Wed: { label: "Rest",               sessionType: null,                                      detail: "Full rest. CNS needs 48h after Monday complex.", isRest: true },
+      Thu: { label: "Vertical Focus",      sessionType: "Lower Power (Jumps + Squats)",           detail: "Weighted jump squat 5×3 @20–30% BW, standing broad jump 4×4, tuck jump 3×5", isRest: false },
+      Fri: { label: "Depth Drops + Upper", sessionType: "Upper Pull",                             detail: "Depth drop from 24\" 4×5 (stick every landing), pull-up 4×max, cable row 4×10, face pull 3×15", isRest: false },
+      Sat: { label: "High Box Jumps",      sessionType: "Plyometrics",                            detail: "Box jump 6×3 @24–30\" (max effort, full reset, step down). Log highest clean jump.", isRest: false },
+      Sun: { label: "Rest",               sessionType: null,                                      detail: "Full rest.", isRest: true },
     },
   },
   4: {
     weeklyNote: "Volume drops, intensity stays. Your body is loaded — trust the process and taper.",
     deloadMods: "N/A — this is the peak phase.",
     days: {
-      Mon: { label: "Max Effort Jumps",       sessionType: "Plyometrics",                              detail: "3–5 attempts at goal height (36\"). Full 5-min rest between. Stop if form degrades.", isRest: false },
-      Tue: { label: "CNS Maintenance",        sessionType: "Lower Strength (Deadlifts, Split Squats)", detail: "Squat 3×2 @85% (low volume, high intensity). Pull-up 3×5 weighted. Done.", isRest: false },
-      Wed: { label: "Full Rest",              sessionType: null,                                        detail: "No training. Walk, stretch, sleep.", isRest: true },
-      Thu: { label: "Reactive Power",         sessionType: "Lower Power (Jumps + Squats)",             detail: "Tuck jump 3×4, hurdle hop 3×5, depth jump 3×3 @18\". Low volume, explosive intent.", isRest: false },
-      Fri: { label: "Mobility & Visualization", sessionType: "Recovery / Mobility",                   detail: "Hip, ankle, thoracic mobility. 10 min visualization of the 36\" attempt. No fatigue.", isRest: false },
-      Sat: { label: "Trial Simulation",       sessionType: "Plyometrics",                              detail: "Sub-maximal jumps @30–33\". 4 attempts. Save CNS for the real attempt.", isRest: false },
-      Sun: { label: "Rest",                   sessionType: null,                                        detail: "Full rest.", isRest: true },
+      Mon: { label: "Max Effort Jumps",          sessionType: "Plyometrics",                              detail: "3–5 attempts at goal height (36\"). Full 5-min rest between. Stop if form degrades.", isRest: false },
+      Tue: { label: "CNS Maintenance",           sessionType: "Lower Strength (Deadlifts, Split Squats)", detail: "Squat 3×2 @85% (low volume, high intensity). Pull-up 3×5 weighted. Done.", isRest: false },
+      Wed: { label: "Full Rest",                 sessionType: null,                                        detail: "No training. Walk, stretch, sleep.", isRest: true },
+      Thu: { label: "Reactive Power",            sessionType: "Lower Power (Jumps + Squats)",             detail: "Tuck jump 3×4, hurdle hop 3×5, depth jump 3×3 @18\". Low volume, explosive intent.", isRest: false },
+      Fri: { label: "Mobility & Visualization",  sessionType: "Recovery / Mobility",                      detail: "Hip, ankle, thoracic mobility. 10 min visualization of the 36\" attempt. No fatigue.", isRest: false },
+      Sat: { label: "Trial Simulation",          sessionType: "Plyometrics",                              detail: "Sub-maximal jumps @30–33\". 4 attempts. Save CNS for the real attempt.", isRest: false },
+      Sun: { label: "Rest",                      sessionType: null,                                        detail: "Full rest.", isRest: true },
     },
   },
 };
@@ -81,13 +79,31 @@ const SESSION_TYPES = [
 ];
 const CARDIO_TYPES = ["Swimming","Biking","Running","Other"];
 
-const JUMP_MILESTONES  = [{ height: 12, label: "First jump", emoji: "🌱" },{ height: 18, label: "Phase 2 target", emoji: "⚡" },{ height: 24, label: "2-foot barrier", emoji: "🔥" },{ height: 30, label: "Phase 3 target", emoji: "💥" },{ height: 33, label: "3 inches out", emoji: "🎯" },{ height: 36, label: "GOAL", emoji: "🏆" }];
-const SQUAT_MILESTONES = [{ weight: 135, label: "Plate on each side", emoji: "🔩" },{ weight: 185, label: "Phase 1 target", emoji: "💪" },{ weight: 225, label: "Phase 2 target", emoji: "⚡" },{ weight: 275, label: "~1.1× BW", emoji: "🔥" },{ weight: 315, label: "Three plates", emoji: "💥" },{ weight: 380, label: "1.5× BW — jump ready", emoji: "🏆" }];
+const JUMP_MILESTONES = [
+  { height: 12, label: "First jump",      emoji: "🌱" },
+  { height: 18, label: "Phase 2 target",  emoji: "⚡" },
+  { height: 24, label: "2-foot barrier",  emoji: "🔥" },
+  { height: 30, label: "Phase 3 target",  emoji: "💥" },
+  { height: 33, label: "3 inches out",    emoji: "🎯" },
+  { height: 36, label: "GOAL",            emoji: "🏆" },
+];
+const SQUAT_MILESTONES = [
+  { weight: 135, label: "Plate on each side",    emoji: "🔩" },
+  { weight: 185, label: "Phase 1 target",        emoji: "💪" },
+  { weight: 225, label: "Phase 2 target",        emoji: "⚡" },
+  { weight: 275, label: "~1.1× BW",             emoji: "🔥" },
+  { weight: 315, label: "Three plates",          emoji: "💥" },
+  { weight: 380, label: "1.5× BW — jump ready", emoji: "🏆" },
+];
 
 const phaseFor    = (week) => PHASES.find(p => week >= p.startWeek && week <= p.endWeek) || PHASES[0];
 const todayStr    = () => new Date().toISOString().split("T")[0];
-const todayDOW    = () => { const d = new Date(); return DAYS_ORDER[(d.getDay() + 6) % 7]; };
+const todayDOW    = () => DAYS_ORDER[(new Date().getDay() + 6) % 7];
 const isDeload    = (week, phase) => phase?.deloadWeeks?.includes(week);
+const toInt       = (v) => v ? parseInt(v) : null;
+const phaseProgressPct = (phase, week) =>
+  Math.min(Math.round(((week - phase.startWeek) / phase.weeks) * 100), 100);
+
 const weekForDate = (dateStr, startDate) => {
   const start = new Date(startDate); start.setHours(0,0,0,0);
   const d     = new Date(dateStr);   d.setHours(0,0,0,0);
@@ -96,35 +112,128 @@ const weekForDate = (dateStr, startDate) => {
 };
 
 const dateForDOW = (dow) => {
-  const today = new Date();
+  const today    = new Date();
   const todayIdx = (today.getDay() + 6) % 7; // 0=Mon
-  const targetIdx = DAYS_ORDER.indexOf(dow);
-  const diff = targetIdx - todayIdx;
-  const d = new Date(today);
-  d.setDate(d.getDate() + diff);
+  const d        = new Date(today);
+  d.setDate(d.getDate() + DAYS_ORDER.indexOf(dow) - todayIdx);
   return d.toISOString().split("T")[0];
 };
 
 const BLANK_FORM = {
-  date: todayStr(), type: SESSION_TYPES[0], week: "1", phase: "1",
+  type: SESSION_TYPES[0], week: "1", phase: "1",
   boxHeight: "", squatWeight: "", sets: "", reps: "",
   load: "", notes: "", cardioType: "", cardioMinutes: "", bodyweight: "255",
 };
 
+// ── Module-level style constants ──
+const card = { background: "#111118", border: "1px solid #1d1d2e", borderRadius: 14, padding: "20px 22px" };
+const lbl  = { fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: "#9999bb", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 6 };
+const dim  = { fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#9999bb" };
+const body = { fontFamily: "'DM Sans',sans-serif", fontSize: 13, color: "#ccccdd" };
+
+function WeeklyGrid({ currentPhase, sessions, compact, onLogFromPlan }) {
+  const plan  = PHASE_PLANS[currentPhase.id];
+  const today = todayDOW();
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: compact ? "repeat(7,1fr)" : "repeat(auto-fill,minmax(132px,1fr))", gap: compact ? 5 : 10 }}>
+      {DAYS_ORDER.map(dow => {
+        const d       = plan.days[dow];
+        const isToday = dow === today;
+        const date    = dateForDOW(dow);
+        const logged  = sessions.some(s => s.date === date);
+        const isPast  = new Date(date + "T23:59:59") < new Date() && !isToday;
+        const canLog  = !d.isRest && !logged;
+        return (
+          <div key={dow} style={{
+            background: isToday ? "#14142a" : "#0d0d16",
+            border: `1px solid ${isToday ? currentPhase.color + "77" : d.isRest ? "#161620" : "#1d1d2e"}`,
+            borderRadius: 10, padding: compact ? "7px 8px" : "13px 14px",
+            opacity: d.isRest ? 0.45 : 1,
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: compact ? 3 : 7 }}>
+              <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: compact ? 12 : 13, fontWeight: 700, letterSpacing: 1, color: isToday ? currentPhase.color : "#aaaacc" }}>
+                {dow}{isToday && !compact && <span style={{ ...dim, fontSize: 8, marginLeft: 4, color: currentPhase.color, letterSpacing: 1 }}>TODAY</span>}
+              </span>
+              {!d.isRest && (
+                <div style={{ width: 9, height: 9, borderRadius: "50%", flexShrink: 0, background: logged ? "#4ade80" : isPast ? "#f43f5e33" : "#1a1a2e", border: `1.5px solid ${logged ? "#4ade80" : isPast ? "#f43f5e" : "#2a2a3e"}` }} />
+              )}
+            </div>
+            <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: compact ? 9 : 11, fontWeight: 600, color: d.isRest ? "#333" : "#ccccdd", lineHeight: 1.3, marginBottom: compact ? 0 : 5 }}>
+              {d.label}
+            </div>
+            {!compact && !d.isRest && <div style={{ ...dim, fontSize: 10, lineHeight: 1.5, marginBottom: 9 }}>{d.detail}</div>}
+            {!compact && canLog && (
+              <button onClick={() => onLogFromPlan(dow)} style={{
+                fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, letterSpacing: 1, fontSize: 11,
+                background: isToday ? currentPhase.color : "transparent",
+                color: isToday ? "#0b0b12" : currentPhase.color,
+                border: `1px solid ${currentPhase.color}44`, borderRadius: 6,
+                padding: "5px 10px", cursor: "pointer", width: "100%",
+              }}>
+                {isToday ? "▶ LOG TODAY" : "+ LOG"}
+              </button>
+            )}
+            {!compact && logged && <div style={{ ...dim, fontSize: 11, color: "#4ade80" }}>✓ Logged</div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function MilestoneList({ milestones, maxValue, valueKey, unit, color, doneBackground, doneLabelColor }) {
+  return (
+    <>
+      {milestones.map(m => {
+        const val  = m[valueKey];
+        const done = maxValue >= val;
+        return (
+          <div key={val} style={{ ...card, borderColor: done ? `${color}33` : "#1d1d2e", background: done ? doneBackground : "#111118", display: "flex", alignItems: "center", gap: 14, marginBottom: 10 }}>
+            <div style={{ fontSize: 28 }}>{m.emoji}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: done ? color : "#2a2a3e" }}>{val}{unit}</div>
+              <div style={{ ...dim, color: done ? doneLabelColor : "#9999bb" }}>{m.label}</div>
+            </div>
+            {done
+              ? <span style={{ ...dim, fontSize: 10, color }}>✓</span>
+              : <span style={{ ...dim }}>{val - maxValue}{unit} out</span>}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+function MetricChart({ data, dataKey, stroke, unit, yDomain, height = 200, referenceLines = [], activeDot, margin }) {
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <LineChart data={data} margin={margin}>
+        <CartesianGrid stroke="#1a1a28" strokeDasharray="3 3" />
+        <XAxis dataKey="week" tick={{ fill: "#9999bb", fontSize: 10 }} />
+        <YAxis domain={yDomain} tick={{ fill: "#9999bb", fontSize: 10 }} unit={unit} />
+        <Tooltip contentStyle={{ background: "#111118", border: `1px solid ${stroke}`, fontFamily: "DM Sans" }} formatter={v => [`${v}${unit}`, dataKey]} />
+        {referenceLines.map((rl, i) => (
+          <ReferenceLine key={i} y={rl.y} stroke={rl.stroke} strokeDasharray={rl.dash || "4 4"} strokeOpacity={rl.opacity} label={rl.label} />
+        ))}
+        <Line type="monotone" dataKey={dataKey} stroke={stroke} strokeWidth={2.5} dot={{ fill: stroke, r: 4 }} activeDot={activeDot} />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}
+
 export default function App() {
-  const [sessions, setSessions]             = useState([]);
-  const [loading, setLoading]               = useState(true);
-  const [saving, setSaving]                 = useState(false);
-  const [error, setError]                   = useState(null);
-  const [tab, setTab]                       = useState("dashboard");
-  const [showForm, setShowForm]             = useState(false);
-  const [showFeedback, setShowFeedback]     = useState(false);
-  const [feedbackText, setFeedbackText]     = useState("");
-  const [copied, setCopied]                 = useState(false);
-  const [form, setForm]                     = useState(BLANK_FORM);
-  const [editWeekPhase, setEditWeekPhase]   = useState(false);
-  const [showStartEdit, setShowStartEdit]   = useState(false);
-  const [programStart, setProgramStart]     = useState(
+  const [sessions, setSessions]           = useState([]);
+  const [loading, setLoading]             = useState(true);
+  const [saving, setSaving]               = useState(false);
+  const [error, setError]                 = useState(null);
+  const [tab, setTab]                     = useState("dashboard");
+  const [showForm, setShowForm]           = useState(false);
+  const [feedbackText, setFeedbackText]   = useState(""); // non-empty = modal open
+  const [copied, setCopied]               = useState(false);
+  const [form, setForm]                   = useState({ ...BLANK_FORM, date: todayStr() });
+  const [editWeekPhase, setEditWeekPhase] = useState(false);
+  const [showStartEdit, setShowStartEdit] = useState(false);
+  const [programStart, setProgramStart]   = useState(
     () => localStorage.getItem("programStartDate") || "2026-03-10"
   );
 
@@ -139,36 +248,60 @@ export default function App() {
     load();
   }, []);
 
-  // ── Derived stats ──
-  const currentWeek        = weekForDate(todayStr(), programStart);
-  const currentPhase       = phaseFor(currentWeek);
-  const maxJump            = Math.max(...sessions.map(s => s.box_height || 0), 0);
-  const maxSquat           = Math.max(...sessions.map(s => s.squat_weight || 0), 105);
-  const latestBW           = sessions.filter(s => s.bodyweight).slice(-1)[0]?.bodyweight || 255;
-  const bwDrop             = 255 - latestBW;
-  const nextJumpMilestone  = JUMP_MILESTONES.find(m => m.height > maxJump) || JUMP_MILESTONES.at(-1);
-  const nextSquatMilestone = SQUAT_MILESTONES.find(m => m.weight > maxSquat) || SQUAT_MILESTONES.at(-1);
-  const jumpCeiling        = (() => { const t = Math.min(maxSquat / (latestBW * 1.5), 1.0); return Math.round((18 + 18 * Math.sqrt(t)) * 10) / 10; })();
-  const jumpProgress       = Math.round((maxJump / 36) * 100);
-  const squatProgress      = Math.round(Math.min((maxSquat / 380) * 100, 100));
-  const weeksLeft          = Math.max(0, TOTAL_WEEKS - currentWeek);
-  const todayPlan          = PHASE_PLANS[currentPhase.id]?.days[todayDOW()];
-  const todayLogged        = sessions.some(s => s.date === todayStr());
-  const deloadThisWeek     = isDeload(currentWeek, currentPhase);
+  const currentWeek  = weekForDate(todayStr(), programStart);
+  const currentPhase = phaseFor(currentWeek);
 
-  const heightData = sessions.filter(s => s.box_height).map(s => ({ week: `W${s.week}`, height: s.box_height }));
-  const squatData  = sessions.filter(s => s.squat_weight).map(s => ({ week: `W${s.week}`, squat: s.squat_weight }));
-  const bwData     = sessions.filter(s => s.bodyweight).map(s => ({ week: `W${s.week}`, bw: s.bodyweight }));
-  const radarData  = [
-    { axis: "Lower Power", value: Math.min(sessions.filter(s => s.type.includes("Lower Power") || s.type.includes("Complex")).length * 12, 100) },
-    { axis: "Strength",    value: Math.min(sessions.filter(s => s.type.includes("Lower Strength")).length * 10, 100) },
-    { axis: "Plyos",       value: Math.min(sessions.filter(s => s.type === "Plyometrics").length * 14, 100) },
-    { axis: "Upper",       value: Math.min(sessions.filter(s => s.type.includes("Upper")).length * 10, 100) },
-    { axis: "Cardio",      value: Math.min(sessions.filter(s => s.type === "Cardio").length * 10, 100) },
-    { axis: "Recovery",    value: Math.min(sessions.filter(s => s.type.includes("Core") || s.type.includes("Recovery")).length * 12, 100) },
-  ];
+  const stats = useMemo(() => {
+    let maxJump = 0, maxSquat = 105, latestBW = 255, lastBWSession = null;
+    const heightData = [], squatData = [], bwData = [];
+    const counts = { lowerPower: 0, lowerStrength: 0, plyos: 0, upper: 0, upperPush: 0, upperPull: 0, cardio: 0, core: 0, recovery: 0, lower: 0, total: 0 };
+    const today = todayStr();
+    let todayLogged = false;
 
-  // ── Open form helpers ──
+    for (const s of sessions) {
+      if (s.box_height)    { maxJump  = Math.max(maxJump, s.box_height);   heightData.push({ week: `W${s.week}`, height: s.box_height }); }
+      if (s.squat_weight)  { maxSquat = Math.max(maxSquat, s.squat_weight); squatData.push({ week: `W${s.week}`, squat: s.squat_weight }); }
+      if (s.bodyweight)    { latestBW = s.bodyweight; lastBWSession = s;    bwData.push({ week: `W${s.week}`, bw: s.bodyweight }); }
+      if (s.date === today) todayLogged = true;
+      const t = s.type;
+      counts.total++;
+      if (t.includes("Lower Power") || t.includes("Complex")) counts.lowerPower++;
+      if (t.includes("Lower Strength")) counts.lowerStrength++;
+      if (t === "Plyometrics")          counts.plyos++;
+      if (t.includes("Upper"))          counts.upper++;
+      if (t === "Upper Push")           counts.upperPush++;
+      if (t === "Upper Pull")           counts.upperPull++;
+      if (t === "Cardio")               counts.cardio++;
+      if (t.includes("Core"))           counts.core++;
+      if (t.includes("Recovery"))       counts.recovery++;
+      if (t.includes("Lower"))          counts.lower++;
+    }
+
+    const bwDrop             = 255 - latestBW;
+    const nextJumpMilestone  = JUMP_MILESTONES.find(m => m.height > maxJump)  || JUMP_MILESTONES.at(-1);
+    const nextSquatMilestone = SQUAT_MILESTONES.find(m => m.weight > maxSquat) || SQUAT_MILESTONES.at(-1);
+    const strRatio           = Math.min(maxSquat / (latestBW * 1.5), 1.0);
+    const jumpCeiling        = Math.round((18 + 18 * Math.sqrt(strRatio)) * 10) / 10;
+    const jumpProgress       = Math.round((maxJump / 36) * 100);
+    const squatProgress      = Math.round(Math.min((maxSquat / 380) * 100, 100));
+    const radarData          = [
+      { axis: "Lower Power", value: Math.min(counts.lowerPower * 12, 100) },
+      { axis: "Strength",    value: Math.min(counts.lowerStrength * 10, 100) },
+      { axis: "Plyos",       value: Math.min(counts.plyos * 14, 100) },
+      { axis: "Upper",       value: Math.min(counts.upper * 10, 100) },
+      { axis: "Cardio",      value: Math.min(counts.cardio * 10, 100) },
+      { axis: "Recovery",    value: Math.min((counts.core + counts.recovery) * 12, 100) },
+    ];
+
+    return { maxJump, maxSquat, latestBW, lastBWSession, bwDrop, nextJumpMilestone, nextSquatMilestone, jumpCeiling, jumpProgress, squatProgress, heightData, squatData, bwData, radarData, counts, todayLogged };
+  }, [sessions]);
+
+  const { maxJump, maxSquat, latestBW, lastBWSession, bwDrop, nextJumpMilestone, nextSquatMilestone, jumpCeiling, jumpProgress, squatProgress, heightData, squatData, bwData, radarData, counts, todayLogged } = stats;
+
+  const weeksLeft      = Math.max(0, TOTAL_WEEKS - currentWeek);
+  const todayPlan      = PHASE_PLANS[currentPhase.id]?.days[todayDOW()];
+  const deloadThisWeek = isDeload(currentWeek, currentPhase);
+
   const openForm = useCallback((prefill = {}) => {
     const date  = prefill.date || todayStr();
     const week  = weekForDate(date, programStart);
@@ -184,23 +317,25 @@ export default function App() {
     openForm({ date: dateForDOW(dow), type: plan.sessionType || SESSION_TYPES[0], notes: plan.detail });
   }, [currentPhase, openForm]);
 
-  // ── Save & delete ──
   const addSession = async () => {
     setSaving(true); setError(null);
     const { data, error } = await supabase.from("sessions").insert([{
       date: form.date, week: parseInt(form.week), phase: parseInt(form.phase), type: form.type,
-      box_height:     form.boxHeight     ? parseInt(form.boxHeight)     : null,
-      squat_weight:   form.squatWeight   ? parseInt(form.squatWeight)   : null,
-      sets:           form.sets          ? parseInt(form.sets)          : null,
-      reps:           form.reps          ? parseInt(form.reps)          : null,
-      load:           form.load          || null,
-      notes:          form.notes         || null,
-      cardio_type:    form.cardioType    || null,
-      cardio_minutes: form.cardioMinutes ? parseInt(form.cardioMinutes) : null,
-      bodyweight:     form.bodyweight    ? parseInt(form.bodyweight)    : null,
+      box_height:     toInt(form.boxHeight),
+      squat_weight:   toInt(form.squatWeight),
+      sets:           toInt(form.sets),
+      reps:           toInt(form.reps),
+      load:           form.load       || null,
+      notes:          form.notes      || null,
+      cardio_type:    form.cardioType || null,
+      cardio_minutes: toInt(form.cardioMinutes),
+      bodyweight:     toInt(form.bodyweight),
     }]).select();
     if (error) setError(error.message);
-    else { setSessions(prev => [...prev, ...data].sort((a, b) => new Date(a.date) - new Date(b.date))); setShowForm(false); }
+    else {
+      setSessions(prev => [...prev, ...data].sort((a, b) => new Date(a.date) - new Date(b.date)));
+      setShowForm(false);
+    }
     setSaving(false);
   };
 
@@ -209,70 +344,26 @@ export default function App() {
     if (!error) setSessions(prev => prev.filter(s => s.id !== id));
   };
 
-  // ── AI Feedback ──
   const generateFeedback = useCallback(() => {
     const recent = sessions.slice(-12);
-    const txt = `PROJECT 36-INCH COUNTER — TRAINING LOG\nGenerated: ${new Date().toLocaleDateString()}\n\nATHLETE: 255 lbs start / 6'1" / Goal: 36" by Oct 1, 2026\nCurrent BW: ${latestBW} lbs (dropped: ${bwDrop} lbs)\nWeek: ${currentWeek}/${TOTAL_WEEKS} | Phase ${currentPhase.id}: ${currentPhase.name}\nBest jump: ${maxJump > 0 ? maxJump + '"' : "not yet"} | Best squat: ${maxSquat} lbs (goal: 380)\n\nRECENT SESSIONS:\n${recent.map(s => `- ${s.date} Wk${s.week} | ${s.type}${s.box_height ? ` | Jump: ${s.box_height}"` : ""}${s.squat_weight ? ` | Squat: ${s.squat_weight}lbs` : ""}${s.load ? ` | ${s.load}` : ""}${s.notes ? ` | "${s.notes}"` : ""}`).join("\n")}\n\nTOTALS: Lower: ${sessions.filter(s=>s.type.includes("Lower")).length} | Upper: ${sessions.filter(s=>s.type.includes("Upper")).length} | Plyos: ${sessions.filter(s=>s.type==="Plyometrics").length} | Cardio: ${sessions.filter(s=>s.type==="Cardio").length}\n\nRespond with: (1) On track for 36" by Oct 1? (2) Squat pace to 380 lbs? (3) Red flags? (4) Top 3 priorities next 2–3 weeks (5) BW trend assessment`;
-    setFeedbackText(txt); setShowFeedback(true);
-  }, [sessions, currentWeek, currentPhase, maxJump, maxSquat, latestBW, bwDrop]);
-
-  // ── Styles ──
-  const card = { background: "#111118", border: "1px solid #1d1d2e", borderRadius: 14, padding: "20px 22px" };
-  const lbl  = { fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: "#9999bb", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 6 };
-  const dim  = { fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#9999bb" };
-  const body = { fontFamily: "'DM Sans',sans-serif", fontSize: 13, color: "#ccccdd" };
-
-  // ── Weekly plan grid (reused in Dashboard and Plan tab) ──
-  const WeeklyGrid = ({ compact }) => {
-    const plan = PHASE_PLANS[currentPhase.id];
-    const today = todayDOW();
-    return (
-      <div style={{ display: "grid", gridTemplateColumns: compact ? "repeat(7,1fr)" : "repeat(auto-fill,minmax(132px,1fr))", gap: compact ? 5 : 10 }}>
-        {DAYS_ORDER.map(dow => {
-          const d        = plan.days[dow];
-          const isToday  = dow === today;
-          const date     = dateForDOW(dow);
-          const logged   = sessions.some(s => s.date === date);
-          const isPast   = new Date(date + "T23:59:59") < new Date() && !isToday;
-          const canLog   = !d.isRest && !logged;
-
-          return (
-            <div key={dow} style={{
-              background: isToday ? "#14142a" : "#0d0d16",
-              border: `1px solid ${isToday ? currentPhase.color + "77" : d.isRest ? "#161620" : "#1d1d2e"}`,
-              borderRadius: 10, padding: compact ? "7px 8px" : "13px 14px",
-              opacity: d.isRest ? 0.45 : 1,
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: compact ? 3 : 7 }}>
-                <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: compact ? 12 : 13, fontWeight: 700, letterSpacing: 1, color: isToday ? currentPhase.color : "#aaaacc" }}>
-                  {dow}{isToday && !compact && <span style={{ ...dim, fontSize: 8, marginLeft: 4, color: currentPhase.color, letterSpacing: 1 }}>TODAY</span>}
-                </span>
-                {!d.isRest && (
-                  <div style={{ width: 9, height: 9, borderRadius: "50%", flexShrink: 0, background: logged ? "#4ade80" : isPast ? "#f43f5e33" : "#1a1a2e", border: `1.5px solid ${logged ? "#4ade80" : isPast ? "#f43f5e" : "#2a2a3e"}` }} />
-                )}
-              </div>
-              <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: compact ? 9 : 11, fontWeight: 600, color: d.isRest ? "#333" : "#ccccdd", lineHeight: 1.3, marginBottom: compact ? 0 : 5 }}>
-                {d.label}
-              </div>
-              {!compact && !d.isRest && <div style={{ ...dim, fontSize: 10, lineHeight: 1.5, marginBottom: 9 }}>{d.detail}</div>}
-              {!compact && canLog && (
-                <button onClick={() => openFormFromPlan(dow)} style={{
-                  fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700, letterSpacing: 1, fontSize: 11,
-                  background: isToday ? currentPhase.color : "transparent",
-                  color: isToday ? "#0b0b12" : currentPhase.color,
-                  border: `1px solid ${currentPhase.color}44`, borderRadius: 6,
-                  padding: "5px 10px", cursor: "pointer", width: "100%",
-                }}>
-                  {isToday ? "▶ LOG TODAY" : "+ LOG"}
-                </button>
-              )}
-              {!compact && logged && <div style={{ ...dim, fontSize: 11, color: "#4ade80" }}>✓ Logged</div>}
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
+    const txt = [
+      `PROJECT 36-INCH COUNTER — TRAINING LOG`,
+      `Generated: ${new Date().toLocaleDateString()}`,
+      ``,
+      `ATHLETE: 255 lbs start / 6'1" / Goal: 36" by Oct 1, 2026`,
+      `Current BW: ${latestBW} lbs (dropped: ${bwDrop} lbs)`,
+      `Week: ${currentWeek}/${TOTAL_WEEKS} | Phase ${currentPhase.id}: ${currentPhase.name}`,
+      `Best jump: ${maxJump > 0 ? maxJump + '"' : "not yet"} | Best squat: ${maxSquat} lbs (goal: 380)`,
+      ``,
+      `RECENT SESSIONS:`,
+      ...recent.map(s => `- ${s.date} Wk${s.week} | ${s.type}${s.box_height ? ` | Jump: ${s.box_height}"` : ""}${s.squat_weight ? ` | Squat: ${s.squat_weight}lbs` : ""}${s.load ? ` | ${s.load}` : ""}${s.notes ? ` | "${s.notes}"` : ""}`),
+      ``,
+      `TOTALS: Lower: ${counts.lower} | Upper: ${counts.upper} | Plyos: ${counts.plyos} | Cardio: ${counts.cardio}`,
+      ``,
+      `Respond with: (1) On track for 36" by Oct 1? (2) Squat pace to 380 lbs? (3) Red flags? (4) Top 3 priorities next 2–3 weeks (5) BW trend assessment`,
+    ].join("\n");
+    setFeedbackText(txt);
+  }, [sessions, currentWeek, currentPhase, maxJump, maxSquat, latestBW, bwDrop, counts]);
 
   if (loading) return (
     <div style={{ background: "#0b0b12", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Barlow Condensed',sans-serif", color: "#4ade80", fontSize: 28, letterSpacing: 3 }}>
@@ -309,7 +400,6 @@ export default function App() {
         .err{background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.25);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-family:'DM Sans',sans-serif;font-size:13px;color:#f43f5e}
       `}</style>
 
-      {/* HEADER */}
       <div style={{ background: "linear-gradient(160deg,#0e0e18,#12121e)", borderBottom: "1px solid #16162a", padding: "22px 24px 0" }}>
         <div style={{ maxWidth: 980, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16, paddingBottom: 20 }}>
@@ -336,11 +426,11 @@ export default function App() {
             </div>
             <div style={{ display: "flex", alignItems: "stretch" }}>
               {[
-                { val: maxJump > 0 ? `${maxJump}"` : "—", sub: "BEST JUMP",      color: "#4ade80" },
-                { val: `${jumpCeiling}"`,                   sub: "STR CEILING",  color: "#facc1599" },
-                { val: `${maxSquat}`,                       sub: "BEST SQUAT",   color: "#facc15", unit: "lbs" },
-                { val: `${latestBW}`,                       sub: "BODYWEIGHT", color: bwDrop > 0 ? "#4ade80" : "#f97316", unit: "lbs" },
-                { val: `W${currentWeek}`,                   sub: `PHASE ${currentPhase.id}`, color: currentPhase.color },
+                { val: maxJump > 0 ? `${maxJump}"` : "—", sub: "BEST JUMP",    color: "#4ade80" },
+                { val: `${jumpCeiling}"`,                  sub: "STR CEILING",  color: "#facc1599" },
+                { val: `${maxSquat}`,                      sub: "BEST SQUAT",   color: "#facc15", unit: "lbs" },
+                { val: `${latestBW}`,                      sub: "BODYWEIGHT",   color: bwDrop > 0 ? "#4ade80" : "#f97316", unit: "lbs" },
+                { val: `W${currentWeek}`,                  sub: `PHASE ${currentPhase.id}`, color: currentPhase.color },
               ].map((s, i) => (
                 <div key={i} style={{ padding: "10px 20px", borderLeft: i > 0 ? "1px solid #16162a" : "none", textAlign: "center", minWidth: 80 }}>
                   <div style={{ fontSize: 34, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.val}</div>
@@ -375,11 +465,8 @@ export default function App() {
       <div style={{ maxWidth: 980, margin: "0 auto", padding: "26px 24px" }}>
         {error && <div className="err">⚠ {error}</div>}
 
-        {/* ── DASHBOARD ── */}
         {tab === "dashboard" && (
           <div style={{ display: "grid", gap: 18 }}>
-
-            {/* TODAY CARD */}
             <div style={{ ...card, borderColor: todayLogged ? "#4ade8044" : todayPlan?.isRest ? "#1d1d2e" : currentPhase.color + "66", background: todayLogged ? "linear-gradient(135deg,#0d1a10,#0f1815)" : "#111118" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
                 <div style={{ flex: 1 }}>
@@ -415,7 +502,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* COMPACT WEEK STRIP */}
             <div style={card}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                 <div style={lbl}>This Week</div>
@@ -428,7 +514,7 @@ export default function App() {
                   ))}
                 </div>
               </div>
-              <WeeklyGrid compact={true} />
+              <WeeklyGrid currentPhase={currentPhase} sessions={sessions} compact={true} onLogFromPlan={openFormFromPlan} />
             </div>
 
             {bwDrop > 0 && (
@@ -437,14 +523,13 @@ export default function App() {
               </div>
             )}
 
-            {/* STAT CARDS */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 16 }}>
               <div style={{ ...card, borderColor: currentPhase.color + "44" }}>
                 <div style={lbl}>Active Phase</div>
                 <div style={{ fontSize: 20, fontWeight: 700, color: currentPhase.color }}>{currentPhase.name}</div>
                 <div style={{ ...dim, marginTop: 5, lineHeight: 1.6 }}>{currentPhase.description}</div>
                 <div style={{ marginTop: 12 }}>
-                  <div className="pbar"><div className="pfill" style={{ width: `${Math.min(Math.round(((currentWeek - currentPhase.startWeek) / currentPhase.weeks) * 100), 100)}%`, background: currentPhase.color }} /></div>
+                  <div className="pbar"><div className="pfill" style={{ width: `${phaseProgressPct(currentPhase, currentWeek)}%`, background: currentPhase.color }} /></div>
                   <div style={{ ...dim, fontSize: 10, marginTop: 4 }}>Wk {currentWeek - currentPhase.startWeek + 1} of {currentPhase.weeks} · {currentPhase.squatTarget}</div>
                 </div>
               </div>
@@ -468,7 +553,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* CHARTS */}
             <div className="g2">
               <div style={card}>
                 <div style={lbl}>Training Balance</div>
@@ -483,17 +567,13 @@ export default function App() {
               <div style={card}>
                 <div style={lbl}>Box Jump Height</div>
                 {heightData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={190}>
-                    <LineChart data={heightData}>
-                      <CartesianGrid stroke="#1a1a28" strokeDasharray="3 3" />
-                      <XAxis dataKey="week" tick={{ fill: "#9999bb", fontSize: 10 }} />
-                      <YAxis domain={[0, 40]} tick={{ fill: "#9999bb", fontSize: 10 }} unit='"' />
-                      <Tooltip contentStyle={{ background: "#111118", border: "1px solid #1d1d2e", fontFamily: "DM Sans", fontSize: 12 }} formatter={v => [`${v}"`, "Height"]} />
-                      <ReferenceLine y={36} stroke="#f43f5e" strokeDasharray="4 4" label={{ value: '36" goal', position: "insideTopRight", fill: "#f43f5e", fontSize: 9, fontFamily: "DM Sans" }} />
-                      <ReferenceLine y={jumpCeiling} stroke="#facc15" strokeDasharray="5 3" strokeOpacity={0.6} label={{ value: `${jumpCeiling}" ceiling`, position: "insideBottomRight", fill: "#facc15", fontSize: 9, fontFamily: "DM Sans" }} />
-                      <Line type="monotone" dataKey="height" stroke="#4ade80" strokeWidth={2.5} dot={{ fill: "#4ade80", r: 4 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <MetricChart
+                    data={heightData} dataKey="height" stroke="#4ade80" unit={'"'} yDomain={[0, 40]} height={190}
+                    referenceLines={[
+                      { y: 36, stroke: "#f43f5e", dash: "4 4", label: { value: '36" goal', position: "insideTopRight", fill: "#f43f5e", fontSize: 9, fontFamily: "DM Sans" } },
+                      { y: jumpCeiling, stroke: "#facc15", dash: "5 3", opacity: 0.6, label: { value: `${jumpCeiling}" ceiling`, position: "insideBottomRight", fill: "#facc15", fontSize: 9, fontFamily: "DM Sans" } },
+                    ]}
+                  />
                 ) : (
                   <div style={{ ...dim, height: 190, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "0 20px" }}>
                     Log a session with a box height to see your jump curve
@@ -502,7 +582,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* AI FEEDBACK */}
             <div style={{ ...card, background: "linear-gradient(135deg,#0d1a10,#0f1815)", borderColor: "#1a3020" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 14 }}>
                 <div>
@@ -515,7 +594,6 @@ export default function App() {
           </div>
         )}
 
-        {/* ── PLAN TAB ── */}
         {tab === "plan" && (
           <div style={{ display: "grid", gap: 20 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
@@ -525,21 +603,17 @@ export default function App() {
               </div>
               <button className="btn-g" onClick={() => openForm()}>+ Log Custom Session</button>
             </div>
-
             {deloadThisWeek && (
               <div style={{ background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.25)", borderRadius: 10, padding: "12px 16px", ...body, color: "#f97316" }}>
                 ⚡ <strong>DELOAD WEEK {currentWeek}</strong> — {PHASE_PLANS[currentPhase.id].deloadMods}
               </div>
             )}
-
             <div style={card}>
-              <WeeklyGrid compact={false} />
+              <WeeklyGrid currentPhase={currentPhase} sessions={sessions} compact={false} onLogFromPlan={openFormFromPlan} />
             </div>
-
-            {/* All phase plans reference */}
             <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: 1, marginTop: 4 }}>ALL PHASE PLANS</div>
             {PHASES.map(ph => {
-              const plan = PHASE_PLANS[ph.id];
+              const plan     = PHASE_PLANS[ph.id];
               const isActive = currentPhase.id === ph.id;
               return (
                 <div key={ph.id} style={{ ...card, borderColor: isActive ? ph.color + "55" : "#1d1d2e", marginBottom: 0, opacity: currentWeek > ph.endWeek ? 0.5 : 1 }}>
@@ -576,7 +650,6 @@ export default function App() {
           </div>
         )}
 
-        {/* ── LOG TAB ── */}
         {tab === "log" && (
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
@@ -613,55 +686,40 @@ export default function App() {
           </div>
         )}
 
-        {/* ── PROGRESS TAB ── */}
         {tab === "progress" && (
           <div style={{ display: "grid", gap: 18 }}>
             <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: 1 }}>PROGRESS CHARTS</div>
             <div style={card}>
               <div style={lbl}>Box Jump Height Over Time (goal: 36")</div>
               {heightData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={260}>
-                  <LineChart data={heightData} margin={{ top: 16, right: 16, bottom: 0, left: 0 }}>
-                    <CartesianGrid stroke="#1a1a28" strokeDasharray="3 3" />
-                    <XAxis dataKey="week" tick={{ fill: "#9999bb", fontSize: 11, fontFamily: "DM Sans" }} />
-                    <YAxis domain={[0, 40]} tick={{ fill: "#9999bb", fontSize: 11 }} unit='"' />
-                    <Tooltip contentStyle={{ background: "#111118", border: "1px solid #4ade80", fontFamily: "DM Sans" }} formatter={v => [`${v}"`, "Jump height"]} />
-                    <ReferenceLine y={36} stroke="#f43f5e" strokeDasharray="5 5" label={{ value: "🎯 36\" GOAL", fill: "#f43f5e", fontSize: 11 }} />
-                    <ReferenceLine y={24} stroke="#facc1566" strokeDasharray="3 3" />
-                    <Line type="monotone" dataKey="height" stroke="#4ade80" strokeWidth={3} dot={{ fill: "#4ade80", r: 5 }} activeDot={{ r: 7, fill: "#22d3ee" }} />
-                  </LineChart>
-                </ResponsiveContainer>
+                <MetricChart
+                  data={heightData} dataKey="height" stroke="#4ade80" unit={'"'} yDomain={[0, 40]} height={260}
+                  margin={{ top: 16, right: 16, bottom: 0, left: 0 }}
+                  activeDot={{ r: 7, fill: "#22d3ee" }}
+                  referenceLines={[
+                    { y: 36, stroke: "#f43f5e", dash: "5 5", label: { value: '🎯 36" GOAL', fill: "#f43f5e", fontSize: 11 } },
+                    { y: 24, stroke: "#facc1566", dash: "3 3" },
+                  ]}
+                />
               ) : <div style={{ ...dim, padding: "60px 0", textAlign: "center" }}>No jump data yet</div>}
             </div>
             <div className="g2">
               <div style={card}>
                 <div style={lbl}>Squat → 380 lbs</div>
                 {squatData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={200}>
-                    <LineChart data={squatData}>
-                      <CartesianGrid stroke="#1a1a28" strokeDasharray="3 3" />
-                      <XAxis dataKey="week" tick={{ fill: "#9999bb", fontSize: 10 }} />
-                      <YAxis domain={[0, 420]} tick={{ fill: "#9999bb", fontSize: 10 }} unit=" lbs" />
-                      <Tooltip contentStyle={{ background: "#111118", border: "1px solid #facc15", fontFamily: "DM Sans" }} formatter={v => [`${v} lbs`, "Squat"]} />
-                      <ReferenceLine y={380} stroke="#f43f5e" strokeDasharray="4 4" label={{ value: "380 target", fill: "#f43f5e", fontSize: 10 }} />
-                      <Line type="monotone" dataKey="squat" stroke="#facc15" strokeWidth={2.5} dot={{ fill: "#facc15", r: 4 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <MetricChart
+                    data={squatData} dataKey="squat" stroke="#facc15" unit=" lbs" yDomain={[0, 420]} height={200}
+                    referenceLines={[{ y: 380, stroke: "#f43f5e", label: { value: "380 target", fill: "#f43f5e", fontSize: 10 } }]}
+                  />
                 ) : <div style={{ ...dim, padding: "40px 0", textAlign: "center" }}>Log squat weight to track</div>}
               </div>
               <div style={card}>
                 <div style={lbl}>Bodyweight Over Time</div>
                 {bwData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={200}>
-                    <LineChart data={bwData}>
-                      <CartesianGrid stroke="#1a1a28" strokeDasharray="3 3" />
-                      <XAxis dataKey="week" tick={{ fill: "#9999bb", fontSize: 10 }} />
-                      <YAxis domain={[220, 265]} tick={{ fill: "#9999bb", fontSize: 10 }} unit=" lbs" />
-                      <Tooltip contentStyle={{ background: "#111118", border: "1px solid #a78bfa", fontFamily: "DM Sans" }} formatter={v => [`${v} lbs`, "BW"]} />
-                      <ReferenceLine y={240} stroke="#4ade8066" strokeDasharray="3 3" label={{ value: "240 target", fill: "#4ade80", fontSize: 10 }} />
-                      <Line type="monotone" dataKey="bw" stroke="#a78bfa" strokeWidth={2.5} dot={{ fill: "#a78bfa", r: 4 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <MetricChart
+                    data={bwData} dataKey="bw" stroke="#a78bfa" unit=" lbs" yDomain={[220, 265]} height={200}
+                    referenceLines={[{ y: 240, stroke: "#4ade8066", dash: "3 3", label: { value: "240 target", fill: "#4ade80", fontSize: 10 } }]}
+                  />
                 ) : <div style={{ ...dim, padding: "40px 0", textAlign: "center" }}>Log bodyweight each session to track</div>}
               </div>
             </div>
@@ -669,15 +727,15 @@ export default function App() {
               <div style={lbl}>Session Volume Breakdown</div>
               <div className="g3" style={{ marginTop: 12 }}>
                 {[
-                  { label: "Lower Power / Complex", count: sessions.filter(s=>s.type.includes("Lower Power")||s.type.includes("Complex")).length, color: "#4ade80" },
-                  { label: "Lower Strength",         count: sessions.filter(s=>s.type.includes("Lower Strength")).length, color: "#4ade80" },
-                  { label: "Upper Push",             count: sessions.filter(s=>s.type==="Upper Push").length, color: "#22d3ee" },
-                  { label: "Upper Pull",             count: sessions.filter(s=>s.type==="Upper Pull").length, color: "#22d3ee" },
-                  { label: "Cardio",                 count: sessions.filter(s=>s.type==="Cardio").length, color: "#f97316" },
-                  { label: "Plyometrics",            count: sessions.filter(s=>s.type==="Plyometrics").length, color: "#facc15" },
-                  { label: "Core & Stability",       count: sessions.filter(s=>s.type.includes("Core")).length, color: "#a78bfa" },
-                  { label: "Recovery / Mobility",    count: sessions.filter(s=>s.type.includes("Recovery")).length, color: "#a78bfa" },
-                  { label: "Total Sessions",         count: sessions.length, color: "#f43f5e" },
+                  { label: "Lower Power / Complex", count: counts.lowerPower,    color: "#4ade80" },
+                  { label: "Lower Strength",         count: counts.lowerStrength, color: "#4ade80" },
+                  { label: "Upper Push",             count: counts.upperPush,     color: "#22d3ee" },
+                  { label: "Upper Pull",             count: counts.upperPull,     color: "#22d3ee" },
+                  { label: "Cardio",                 count: counts.cardio,        color: "#f97316" },
+                  { label: "Plyometrics",            count: counts.plyos,         color: "#facc15" },
+                  { label: "Core & Stability",       count: counts.core,          color: "#a78bfa" },
+                  { label: "Recovery / Mobility",    count: counts.recovery,      color: "#a78bfa" },
+                  { label: "Total Sessions",         count: counts.total,         color: "#f43f5e" },
                 ].map(item => (
                   <div key={item.label} style={{ background: "#0d0d15", borderRadius: 10, padding: "14px 16px" }}>
                     <div style={{ fontSize: 36, fontWeight: 800, color: item.color }}>{item.count}</div>
@@ -689,7 +747,6 @@ export default function App() {
           </div>
         )}
 
-        {/* ── PHASES TAB ── */}
         {tab === "phases" && (
           <div>
             <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: 1, marginBottom: 8 }}>TRAINING PHASES</div>
@@ -720,7 +777,7 @@ export default function App() {
                   </div>
                   {isActive && (
                     <div>
-                      <div className="pbar"><div className="pfill" style={{ width: `${Math.min(Math.round(((currentWeek - phase.startWeek) / phase.weeks) * 100), 100)}%`, background: phase.color }} /></div>
+                      <div className="pbar"><div className="pfill" style={{ width: `${phaseProgressPct(phase, currentWeek)}%`, background: phase.color }} /></div>
                       <div style={{ ...dim, fontSize: 10, marginTop: 4 }}>Week {currentWeek - phase.startWeek + 1} of {phase.weeks}</div>
                     </div>
                   )}
@@ -730,51 +787,29 @@ export default function App() {
           </div>
         )}
 
-        {/* ── MILESTONES TAB ── */}
         {tab === "milestones" && (
           <div>
             <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: 1, marginBottom: 20 }}>MILESTONES</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
               <div>
                 <div style={{ ...dim, letterSpacing: 2, marginBottom: 14 }}>JUMP HEIGHT</div>
-                {JUMP_MILESTONES.map(m => {
-                  const done = maxJump >= m.height;
-                  return (
-                    <div key={m.height} style={{ ...card, borderColor: done ? "#4ade8033" : "#1d1d2e", background: done ? "linear-gradient(135deg,#0d1a10,#0f1815)" : "#111118", display: "flex", alignItems: "center", gap: 14, marginBottom: 10 }}>
-                      <div style={{ fontSize: 28 }}>{m.emoji}</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 22, fontWeight: 800, color: done ? "#4ade80" : "#2a2a3e" }}>{m.height}"</div>
-                        <div style={{ ...dim, color: done ? "#88ccaa" : "#9999bb" }}>{m.label}</div>
-                      </div>
-                      {done ? <span style={{ ...dim, fontSize: 10, color: "#4ade80" }}>✓</span>
-                             : <span style={{ ...dim }}>{m.height - maxJump}" out</span>}
-                    </div>
-                  );
-                })}
+                <MilestoneList
+                  milestones={JUMP_MILESTONES} maxValue={maxJump} valueKey="height" unit={'"'}
+                  color="#4ade80" doneBackground="linear-gradient(135deg,#0d1a10,#0f1815)" doneLabelColor="#88ccaa"
+                />
               </div>
               <div>
                 <div style={{ ...dim, letterSpacing: 2, marginBottom: 14 }}>SQUAT STRENGTH</div>
-                {SQUAT_MILESTONES.map(m => {
-                  const done = maxSquat >= m.weight;
-                  return (
-                    <div key={m.weight} style={{ ...card, borderColor: done ? "#facc1533" : "#1d1d2e", background: done ? "linear-gradient(135deg,#1a1500,#161200)" : "#111118", display: "flex", alignItems: "center", gap: 14, marginBottom: 10 }}>
-                      <div style={{ fontSize: 28 }}>{m.emoji}</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 22, fontWeight: 800, color: done ? "#facc15" : "#2a2a3e" }}>{m.weight} lbs</div>
-                        <div style={{ ...dim, color: done ? "#ccaa44" : "#9999bb" }}>{m.label}</div>
-                      </div>
-                      {done ? <span style={{ ...dim, fontSize: 10, color: "#facc15" }}>✓</span>
-                             : <span style={{ ...dim }}>{m.weight - maxSquat} lbs out</span>}
-                    </div>
-                  );
-                })}
+                <MilestoneList
+                  milestones={SQUAT_MILESTONES} maxValue={maxSquat} valueKey="weight" unit=" lbs"
+                  color="#facc15" doneBackground="linear-gradient(135deg,#1a1500,#161200)" doneLabelColor="#ccaa44"
+                />
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* LOG SESSION MODAL */}
       {showForm && (
         <div className="overlay" onClick={() => setShowForm(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -782,14 +817,19 @@ export default function App() {
             {error && <div className="err">⚠ {error}</div>}
             <div style={{ display: "grid", gap: 13 }}>
               <div className="g2">
-                <div><div style={lbl}>Date</div><input type="date" className="inp" value={form.date} onChange={e => {
-                  const newDate  = e.target.value;
-                  const newWeek  = weekForDate(newDate, programStart);
-                  const newPhase = phaseFor(newWeek);
-                  setForm(f => ({ ...f, date: newDate, week: String(newWeek), phase: String(newPhase.id) }));
-                }} /></div>
-                <div><div style={lbl}>Bodyweight (lbs)</div><input type="number" className="inp" placeholder="255" value={form.bodyweight} onChange={e => setForm(f => ({ ...f, bodyweight: e.target.value }))} />
-                  {sessions.filter(s => s.bodyweight).slice(-1)[0] && <div style={{ ...dim, fontSize: 10, marginTop: 4 }}>Last: {sessions.filter(s => s.bodyweight).slice(-1)[0].bodyweight} lbs on {sessions.filter(s => s.bodyweight).slice(-1)[0].date}</div>}
+                <div>
+                  <div style={lbl}>Date</div>
+                  <input type="date" className="inp" value={form.date} onChange={e => {
+                    const newDate  = e.target.value;
+                    const newWeek  = weekForDate(newDate, programStart);
+                    const newPhase = phaseFor(newWeek);
+                    setForm(f => ({ ...f, date: newDate, week: String(newWeek), phase: String(newPhase.id) }));
+                  }} />
+                </div>
+                <div>
+                  <div style={lbl}>Bodyweight (lbs)</div>
+                  <input type="number" className="inp" placeholder="255" value={form.bodyweight} onChange={e => setForm(f => ({ ...f, bodyweight: e.target.value }))} />
+                  {lastBWSession && <div style={{ ...dim, fontSize: 10, marginTop: 4 }}>Last: {lastBWSession.bodyweight} lbs on {lastBWSession.date}</div>}
                 </div>
               </div>
               {editWeekPhase ? (
@@ -843,9 +883,8 @@ export default function App() {
         </div>
       )}
 
-      {/* FEEDBACK MODAL */}
-      {showFeedback && (
-        <div className="overlay" onClick={() => setShowFeedback(false)}>
+      {feedbackText && (
+        <div className="overlay" onClick={() => setFeedbackText("")}>
           <div className="modal" style={{ maxWidth: 640 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: 1 }}>AI FEEDBACK SUMMARY</div>
@@ -858,7 +897,7 @@ export default function App() {
             <pre style={{ ...dim, fontSize: 11.5, color: "#aaaacc", background: "#0d0d15", borderRadius: 10, padding: 16, whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.75, maxHeight: 420, overflowY: "auto" }}>
               {feedbackText}
             </pre>
-            <button className="btn-o" style={{ marginTop: 16, width: "100%" }} onClick={() => setShowFeedback(false)}>Close</button>
+            <button className="btn-o" style={{ marginTop: 16, width: "100%" }} onClick={() => setFeedbackText("")}>Close</button>
           </div>
         </div>
       )}
